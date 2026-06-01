@@ -1,0 +1,409 @@
+{
+  "name": "azure-boards-inbox",
+  "displayName": "Azure Boards Inbox",
+  "description": "Your Azure DevOps work items in VS Code's sidebar. The items on your plate, one click away.",
+  "version": "0.1.0",
+  "publisher": "danilocolombitavares",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "azure devops",
+    "azure boards",
+    "work items",
+    "tracker"
+  ],
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danilocolombi/azure-boards-inbox.git"
+  },
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "azureBoards",
+          "title": "Azure Boards",
+          "icon": "media/azure-boards.svg"
+        }
+      ]
+    },
+    "views": {
+      "azureBoards": [
+        {
+          "id": "azureBoards.workItems",
+          "name": "Work Items"
+        },
+        {
+          "id": "azureBoards.comments",
+          "name": "Comments",
+          "type": "webview"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "azureBoards.workItems",
+        "contents": "Sign in to your Azure DevOps organization to see your work items.\n[Sign in](command:azureBoards.signIn)",
+        "when": "!azureBoards.signedIn"
+      },
+      {
+        "view": "azureBoards.workItems",
+        "contents": "You're signed in but haven't subscribed to any projects yet.\n[Manage Subscriptions](command:azureBoards.manageSubscriptions)",
+        "when": "azureBoards.signedIn && azureBoards.noSubscriptions"
+      }
+    ],
+    "commands": [
+      {
+        "command": "azureBoards.signIn",
+        "title": "Sign In",
+        "category": "Azure Boards"
+      },
+      {
+        "command": "azureBoards.signOut",
+        "title": "Sign Out",
+        "category": "Azure Boards"
+      },
+      {
+        "command": "azureBoards.refresh",
+        "title": "Refresh",
+        "category": "Azure Boards",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "azureBoards.expandAll",
+        "title": "Expand All",
+        "category": "Azure Boards",
+        "icon": "$(expand-all)"
+      },
+      {
+        "command": "azureBoards.collapseAll",
+        "title": "Collapse All",
+        "category": "Azure Boards",
+        "icon": "$(collapse-all)"
+      },
+      {
+        "command": "azureBoards.manageSubscriptions",
+        "title": "Manage Subscriptions",
+        "category": "Azure Boards",
+        "icon": "$(list-selection)"
+      },
+      {
+        "command": "azureBoards.toggleShowClosed",
+        "title": "Show Closed Items",
+        "category": "Azure Boards",
+        "icon": "$(eye-closed)"
+      },
+      {
+        "command": "azureBoards.toggleShowClosedOff",
+        "title": "Hide Closed Items",
+        "category": "Azure Boards",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "azureBoards.toggleAssignedToMeOnly",
+        "title": "Show All Assignees",
+        "category": "Azure Boards",
+        "icon": "$(organization)"
+      },
+      {
+        "command": "azureBoards.toggleAssignedToMeOnlyOff",
+        "title": "Show Only Mine",
+        "category": "Azure Boards",
+        "icon": "$(account)"
+      },
+      {
+        "command": "azureBoards.toggleCurrentIteration",
+        "title": "Show Current Iteration Only",
+        "category": "Azure Boards",
+        "icon": "$(calendar)"
+      },
+      {
+        "command": "azureBoards.toggleCurrentIterationOff",
+        "title": "Show All Iterations",
+        "category": "Azure Boards",
+        "icon": "$(history)"
+      },
+      {
+        "command": "azureBoards.openInBrowser",
+        "title": "Open in Azure DevOps",
+        "category": "Azure Boards",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "azureBoards.copyBranchName",
+        "title": "Copy Branch Name",
+        "category": "Azure Boards",
+        "icon": "$(git-branch)"
+      },
+      {
+        "command": "azureBoards.copyId",
+        "title": "Copy ID (AB#…)",
+        "category": "Azure Boards"
+      },
+      {
+        "command": "azureBoards.copyUrl",
+        "title": "Copy URL",
+        "category": "Azure Boards"
+      },
+      {
+        "command": "azureBoards.search",
+        "title": "Find Work Items",
+        "category": "Azure Boards",
+        "icon": "$(search)"
+      },
+      {
+        "command": "azureBoards.copyAsPrompt",
+        "title": "Copy as Prompt",
+        "category": "Azure Boards",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "azureBoards.editPromptTemplate",
+        "title": "Edit Prompt Template",
+        "category": "Azure Boards",
+        "icon": "$(edit)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "azureBoards.search",
+          "when": "view == azureBoards.workItems",
+          "group": "navigation@0"
+        },
+        {
+          "command": "azureBoards.refresh",
+          "when": "view == azureBoards.workItems",
+          "group": "navigation@1"
+        },
+        {
+          "command": "azureBoards.toggleShowClosed",
+          "when": "view == azureBoards.workItems && !azureBoards.showClosed",
+          "group": "navigation@2"
+        },
+        {
+          "command": "azureBoards.toggleShowClosedOff",
+          "when": "view == azureBoards.workItems && azureBoards.showClosed",
+          "group": "navigation@2"
+        },
+        {
+          "command": "azureBoards.toggleAssignedToMeOnly",
+          "when": "view == azureBoards.workItems && azureBoards.assignedToMeOnly",
+          "group": "navigation@3"
+        },
+        {
+          "command": "azureBoards.toggleAssignedToMeOnlyOff",
+          "when": "view == azureBoards.workItems && !azureBoards.assignedToMeOnly",
+          "group": "navigation@3"
+        },
+        {
+          "command": "azureBoards.toggleCurrentIteration",
+          "when": "view == azureBoards.workItems && !azureBoards.currentIterationOnly",
+          "group": "navigation@4"
+        },
+        {
+          "command": "azureBoards.toggleCurrentIterationOff",
+          "when": "view == azureBoards.workItems && azureBoards.currentIterationOnly",
+          "group": "navigation@4"
+        },
+        {
+          "command": "azureBoards.expandAll",
+          "when": "view == azureBoards.workItems && !azureBoards.treeExpanded",
+          "group": "navigation@5"
+        },
+        {
+          "command": "azureBoards.collapseAll",
+          "when": "view == azureBoards.workItems && azureBoards.treeExpanded",
+          "group": "navigation@5"
+        },
+        {
+          "command": "azureBoards.manageSubscriptions",
+          "when": "view == azureBoards.workItems",
+          "group": "1_config@1"
+        },
+        {
+          "command": "azureBoards.editPromptTemplate",
+          "when": "view == azureBoards.workItems",
+          "group": "1_config@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "azureBoards.copyAsPrompt",
+          "when": "view == azureBoards.workItems && viewItem == workItem",
+          "group": "inline@1"
+        },
+        {
+          "command": "azureBoards.openInBrowser",
+          "when": "view == azureBoards.workItems && viewItem == workItem",
+          "group": "inline@2"
+        },
+        {
+          "command": "azureBoards.copyAsPrompt",
+          "when": "view == azureBoards.workItems && viewItem == workItem",
+          "group": "navigation@1"
+        },
+        {
+          "command": "azureBoards.openInBrowser",
+          "when": "view == azureBoards.workItems && viewItem == workItem",
+          "group": "navigation@2"
+        },
+        {
+          "command": "azureBoards.copyBranchName",
+          "when": "view == azureBoards.workItems && viewItem == workItem",
+          "group": "1_copy@1"
+        },
+        {
+          "command": "azureBoards.copyId",
+          "when": "view == azureBoards.workItems && viewItem == workItem",
+          "group": "1_copy@2"
+        },
+        {
+          "command": "azureBoards.copyUrl",
+          "when": "view == azureBoards.workItems && viewItem == workItem",
+          "group": "1_copy@3"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "azureBoards.toggleShowClosedOff",
+          "when": "false"
+        },
+        {
+          "command": "azureBoards.toggleAssignedToMeOnlyOff",
+          "when": "false"
+        },
+        {
+          "command": "azureBoards.toggleCurrentIterationOff",
+          "when": "false"
+        },
+        {
+          "command": "azureBoards.openInBrowser",
+          "when": "false"
+        },
+        {
+          "command": "azureBoards.copyBranchName",
+          "when": "false"
+        },
+        {
+          "command": "azureBoards.copyId",
+          "when": "false"
+        },
+        {
+          "command": "azureBoards.copyUrl",
+          "when": "false"
+        },
+        {
+          "command": "azureBoards.copyAsPrompt",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Azure Boards",
+      "properties": {
+        "azureBoards.organizationUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Azure DevOps organization URL (e.g. https://dev.azure.com/contoso).",
+          "scope": "application"
+        },
+        "azureBoards.subscriptions": {
+          "type": "array",
+          "default": [],
+          "description": "Projects you're subscribed to, with display order. Managed via the 'Manage Subscriptions' command.",
+          "scope": "application",
+          "items": {
+            "type": "object",
+            "properties": {
+              "projectId": {
+                "type": "string"
+              },
+              "projectName": {
+                "type": "string"
+              },
+              "order": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "projectId",
+              "projectName",
+              "order"
+            ]
+          }
+        },
+        "azureBoards.showClosed": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include closed/done/removed work items in the tree.",
+          "scope": "application"
+        },
+        "azureBoards.assignedToMeOnly": {
+          "type": "boolean",
+          "default": true,
+          "description": "Only show work items assigned to me.",
+          "scope": "application"
+        },
+        "azureBoards.currentIterationOnly": {
+          "type": "boolean",
+          "default": false,
+          "description": "Only show work items in each project's current iteration (default team's current sprint).",
+          "scope": "application"
+        },
+        "azureBoards.autoRefreshMinutes": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "description": "Automatically refresh the tree every N minutes. 0 disables auto-refresh.",
+          "scope": "application"
+        },
+        "azureBoards.branchNamePattern": {
+          "type": "string",
+          "default": "{type}/{id}-{title}",
+          "description": "Pattern used by 'Copy Branch Name'. Tokens: {id}, {title}, {type}. Title and type are slugified.",
+          "scope": "application"
+        },
+        "azureBoards.chatPromptPreamble": {
+          "type": "string",
+          "default": "Help me with this Azure DevOps work item:",
+          "description": "Instruction line available as the {preamble} token in the prompt template. Leave empty for raw details only.",
+          "scope": "application"
+        },
+        "azureBoards.promptTemplate": {
+          "type": "string",
+          "editPresentation": "multilineText",
+          "default": "{preamble}\n\n# {type} #{id}: {title}\n\n{description}\n\n{reproSteps}\n\n{acceptanceCriteria}\n\n{comments}\n\nReference: {link}",
+          "markdownDescription": "Template for **Copy as Prompt**. Tip: run [Edit Prompt Template](command:azureBoards.editPromptTemplate) to edit it in a full editor and apply on save.\n\nThe default focuses on what helps an assistant: type, title, description, repro steps, acceptance criteria, recent comments, and a reference link. Extra workflow tokens are available if you want them: `{state}`, `{priority}`, `{assignedTo}`, `{iteration}`, `{tags}`, `{parent}` (plus `{preamble}`, `{id}`, `{title}`, `{type}`, `{link}`). Section tokens `{description}`, `{reproSteps}`, `{acceptanceCriteria}`, `{comments}` include their own `## heading` and disappear when empty. Any line whose tokens all resolve to empty is removed.",
+          "scope": "application"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js --production",
+    "watch": "node esbuild.js --watch",
+    "compile": "tsc --noEmit",
+    "lint": "eslint src --ext ts",
+    "screenshots": "node scripts/gen-screenshots.js"
+  },
+  "dependencies": {
+    "azure-devops-node-api": "^14.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "esbuild": "^0.20.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.0"
+  }
+}

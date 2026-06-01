@@ -95,12 +95,28 @@ npm run screenshots
 # writes media/screenshots/*.png
 ```
 
-Package and publish:
+Package and publish manually:
 
 ```sh
 npx @vscode/vsce package
 npx @vscode/vsce publish
 ```
+
+### Releasing via CI
+
+This repo ships a GitHub Actions workflow at [`.github/workflows/publish.yml`](.github/workflows/publish.yml) that publishes the extension to the Marketplace and attaches the `.vsix` to a GitHub Release.
+
+One-time setup:
+1. Add a repository secret **`VSCE_PAT`** (Settings → Secrets and variables → Actions) — an Azure DevOps PAT with **Marketplace > Manage** scope, "All accessible organizations".
+
+To cut a release:
+
+```sh
+npm version patch        # bump 0.1.0 → 0.1.1 in package.json and tag v0.1.1
+git push --follow-tags   # CI takes over from here
+```
+
+The workflow verifies the tag matches `package.json`, builds, packages, publishes to the Marketplace, and creates a GitHub Release with the `.vsix` attached.
 
 ## License
 

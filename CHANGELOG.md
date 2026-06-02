@@ -2,6 +2,17 @@
 
 All notable changes to **Azure Boards Inbox** are documented here.
 
+## 0.2.0
+
+- **Pull Requests** side-bar view: every PR linked to the selected item, with status pill (Draft / Active / Merged / Abandoned), title, and `repo · source → target` branches
+- **Pin** items to a section at the top of the tree via the per-row pin button
+- **Branch-aware status bar**: when your active git branch matches `branchNamePattern`, shows `AB#<id> · <title>` with a click to open
+- **Stale hint**: `· Nd` on rows not touched in N days (`azureBoards.staleAfterDays`, default 14, `0` disables)
+- **Open Work Item in Browser…** — Command Palette helper that accepts an id, `AB#id`, or any URL
+- Comments view focuses on the thread only (PRs moved to their own view)
+- README rewrite and refreshed screenshots
+- Internal: `getWorkItemDetails` now dedups in-flight requests so both side-bar views share a single fetch
+
 ## 0.1.0 — Initial release
 
 - Multi-project Work Items tree, grouped and counted, with drag-and-drop reordering

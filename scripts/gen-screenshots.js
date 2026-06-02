@@ -136,6 +136,21 @@ body {
 .context-menu .item:hover { background: #094771; }
 .context-menu .item .codicon { color: #cccccc; font-size: 14px; }
 .context-menu .sep { height: 1px; background: #3c3c3c; margin: 4px 0; }
+
+/* Pull Requests pane (matches the live webview styling) */
+.prs-pane { padding: 8px 12px; overflow: hidden; }
+.prs-pane .ph-header { padding-bottom: 6px; border-bottom: 1px solid #3c3c3c; margin-bottom: 8px; }
+.prs-pane .ph-title { font-weight: 600; color: #cccccc; }
+.prs-pane .ph-link { color: #3794ff; font-size: 0.9em; margin-top: 2px; display: block; }
+.pr { padding: 6px 0; }
+.pr + .pr { margin-top: 8px; }
+.pr-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pr-status { font-size: 0.72em; font-weight: 600; padding: 1px 6px; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+.pr-status-active { background: rgba(55,148,255,0.18); color: #3794ff; }
+.pr-status-draft { background: rgba(157,157,157,0.18); color: #9d9d9d; }
+.pr-status-completed { background: rgba(78,201,176,0.18); color: #4ec9b0; }
+.pr-title { color: #cccccc; text-decoration: none; }
+.pr-meta { color: #9d9d9d; font-size: 0.9em; margin-top: 2px; }
 `;
 
 // --- helpers ---------------------------------------------------------------
@@ -170,6 +185,16 @@ function projectRow(name, count) {
       <span class="twisty"><i class="codicon codicon-chevron-down"></i></span>
       <span class="glyph"><i class="codicon codicon-project project-glyph"></i></span>
       <span class="label">${name}</span>
+      <span class="count">${count}</span>
+    </div>`;
+}
+
+function pinnedGroupRow(count) {
+  return `
+    <div class="row project">
+      <span class="twisty"><i class="codicon codicon-chevron-down"></i></span>
+      <span class="glyph"><i class="codicon codicon-pinned" style="color:#cca700;"></i></span>
+      <span class="label">Pinned</span>
       <span class="count">${count}</span>
     </div>`;
 }
@@ -218,11 +243,15 @@ function commentsHeader() {
     </div>`;
 }
 
-function statusBar() {
+function statusBar({ withBranchItem = false } = {}) {
+  const branchItem = withBranchItem
+    ? `<span class="item"><i class="codicon codicon-git-branch"></i>AB#271 · ${SELECTED_TITLE}</span>`
+    : '';
   return `
     <div class="status-bar">
-      <span class="item"><i class="codicon codicon-source-control"></i>main</span>
+      <span class="item"><i class="codicon codicon-source-control"></i>feature/271-login</span>
       <span class="item"><i class="codicon codicon-account"></i>5</span>
+      ${branchItem}
       <span style="flex:1"></span>
       <span class="item">Ln 1, Col 1</span>
       <span class="item">Spaces: 2</span>
@@ -257,11 +286,17 @@ function commentsBlockWithThread() {
     </div>`;
 }
 
-function workItemsTree({ selectedId } = {}) {
+function workItemsTree({ selectedId, showPinned = true } = {}) {
+  const pinned = showPinned
+    ? `${pinnedGroupRow(2)}
+       ${row({ type: 'bug', state: 'New', id: 271, title: SELECTED_TITLE, assignee: 'Danilo Tavares', selected: selectedId === 271 })}
+       ${row({ type: 'story', state: 'Active', id: 265, title: 'Production Module', assignee: 'Danilo Tavares' })}`
+    : '';
   return `
     <div class="tree">
+      ${pinned}
       ${projectRow('Roadmap', 5)}
-      ${row({ type: 'bug',     state: 'New',    id: 271, title: SELECTED_TITLE, assignee: 'Danilo Tavares', selected: selectedId === 271 })}
+      ${row({ type: 'bug',     state: 'New',    id: 271, title: SELECTED_TITLE, assignee: 'Danilo Tavares' })}
       ${row({ type: 'story',   state: 'Active', id: 265, title: 'Production Module',          assignee: 'Danilo Tavares' })}
       ${row({ type: 'task',    state: 'Active', id: 248, title: 'Migrate logging to OTel',    assignee: 'Alex Chen' })}
       ${row({ type: 'story',   state: 'Active', id: 263, title: 'ERP Replacement',            assignee: 'Maria Souza' })}
@@ -274,28 +309,71 @@ function workItemsTree({ selectedId } = {}) {
     </div>`;
 }
 
+function pullRequestsHeader() {
+  return `
+    <div class="pane-header">
+      <span class="twisty"><i class="codicon codicon-chevron-down"></i></span>
+      <span class="title">Pull Requests</span>
+    </div>`;
+}
+
+function pullRequestsBlock() {
+  return `
+    <div class="prs-pane">
+      <div class="ph-header">
+        <div class="ph-title">${SELECTED_TYPE_LABEL} #${SELECTED_ID}: ${SELECTED_TITLE}</div>
+        <a class="ph-link" href="#">Open in Azure DevOps</a>
+      </div>
+      <div class="pr">
+        <div class="pr-row">
+          <span class="pr-status pr-status-active">Active</span>
+          <a class="pr-title" href="#">PR #482 — Add fallback to local auth for IdP timeouts</a>
+        </div>
+        <div class="pr-meta">contoso · feature/271-login → main</div>
+      </div>
+      <div class="pr">
+        <div class="pr-row">
+          <span class="pr-status pr-status-draft">Draft</span>
+          <a class="pr-title" href="#">PR #488 — Add SSO timeout config</a>
+        </div>
+        <div class="pr-meta">contoso · feature/271-config → main</div>
+      </div>
+      <div class="pr">
+        <div class="pr-row">
+          <span class="pr-status pr-status-completed">Merged</span>
+          <a class="pr-title" href="#">PR #470 — Refactor SSO middleware</a>
+        </div>
+        <div class="pr-meta">contoso · refactor/sso-mw → main</div>
+      </div>
+    </div>`;
+}
+
 // --- scenes ----------------------------------------------------------------
 
 const SCENES = [
   {
     name: 'tree-view',
-    size: [1400, 880],
+    size: [1400, 980],
     body: `
       <div class="frame">
         ${activityBar({ badge: 5 })}
         <div class="side-bar">
           <div class="view-pane" style="flex: 1 1 auto;">
             ${workItemsHeader()}
-            ${workItemsTree({ selectedId: 271 })}
+            ${workItemsTree({ selectedId: 271, showPinned: true })}
           </div>
-          <div class="view-pane" style="flex: 0 0 310px;">
+          <div class="view-pane" style="flex: 0 0 230px;">
+            ${pullRequestsHeader()}
+            ${pullRequestsBlock()}
+          </div>
+          <div class="view-pane" style="flex: 0 0 280px;">
             ${commentsHeader()}
             ${commentsBlockWithThread()}
           </div>
         </div>
         <div class="editor"></div>
       </div>
-      ${statusBar()}
+      ${statusBar({ withBranchItem: true })}
     `
   },
   {
@@ -307,12 +385,13 @@ const SCENES = [
         <div class="side-bar">
           <div class="view-pane" style="flex: 1 1 auto;">
             ${workItemsHeader()}
-            ${workItemsTree({ selectedId: 271 })}
+            ${workItemsTree({ selectedId: 271, showPinned: false })}
           </div>
         </div>
         <div class="editor"></div>
       </div>
-      <div class="context-menu" style="top: 100px; left: 220px;">
+      <div class="context-menu" style="top: 60px; left: 220px;">
+        <div class="item"><i class="codicon codicon-pin"></i><span>Pin</span></div>
         <div class="item"><i class="codicon codicon-comment-discussion"></i><span>Copy as Prompt</span></div>
         <div class="item"><i class="codicon codicon-link-external"></i><span>Open in Azure DevOps</span></div>
         <div class="sep"></div>
@@ -324,15 +403,36 @@ const SCENES = [
     `
   },
   {
-    name: 'comments-view',
-    size: [1200, 720],
+    name: 'pull-requests-view',
+    size: [1200, 760],
     body: `
       <div class="frame">
         ${activityBar({ badge: 5 })}
         <div class="side-bar">
-          <div class="view-pane" style="flex: 0 0 230px;">
+          <div class="view-pane" style="flex: 0 0 240px;">
             ${workItemsHeader()}
-            ${workItemsTree({ selectedId: 271 })}
+            ${workItemsTree({ selectedId: 271, showPinned: false })}
+          </div>
+          <div class="view-pane" style="flex: 1 1 auto;">
+            ${pullRequestsHeader()}
+            ${pullRequestsBlock()}
+          </div>
+        </div>
+        <div class="editor"></div>
+      </div>
+      ${statusBar({ withBranchItem: true })}
+    `
+  },
+  {
+    name: 'comments-view',
+    size: [1200, 760],
+    body: `
+      <div class="frame">
+        ${activityBar({ badge: 5 })}
+        <div class="side-bar">
+          <div class="view-pane" style="flex: 0 0 220px;">
+            ${workItemsHeader()}
+            ${workItemsTree({ selectedId: 271, showPinned: false })}
           </div>
           <div class="view-pane" style="flex: 1 1 auto;">
             ${commentsHeader()}

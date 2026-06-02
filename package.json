@@ -40,6 +40,11 @@
           "name": "Work Items"
         },
         {
+          "id": "azureBoards.pullRequests",
+          "name": "Pull Requests",
+          "type": "webview"
+        },
+        {
           "id": "azureBoards.comments",
           "name": "Comments",
           "type": "webview"
@@ -168,6 +173,29 @@
         "title": "Edit Prompt Template",
         "category": "Azure Boards",
         "icon": "$(edit)"
+      },
+      {
+        "command": "azureBoards.openItem",
+        "title": "Open Work Item in Browser…",
+        "category": "Azure Boards",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "azureBoards.openCurrentBranchItem",
+        "title": "Open Current Branch Item",
+        "category": "Azure Boards"
+      },
+      {
+        "command": "azureBoards.pinItem",
+        "title": "Pin",
+        "category": "Azure Boards",
+        "icon": "$(pin)"
+      },
+      {
+        "command": "azureBoards.unpinItem",
+        "title": "Unpin",
+        "category": "Azure Boards",
+        "icon": "$(pinned)"
       }
     ],
     "menus": {
@@ -235,38 +263,58 @@
       ],
       "view/item/context": [
         {
-          "command": "azureBoards.copyAsPrompt",
+          "command": "azureBoards.pinItem",
           "when": "view == azureBoards.workItems && viewItem == workItem",
+          "group": "inline@0"
+        },
+        {
+          "command": "azureBoards.unpinItem",
+          "when": "view == azureBoards.workItems && viewItem == workItem.pinned",
+          "group": "inline@0"
+        },
+        {
+          "command": "azureBoards.copyAsPrompt",
+          "when": "view == azureBoards.workItems && viewItem =~ /^workItem/",
           "group": "inline@1"
         },
         {
           "command": "azureBoards.openInBrowser",
-          "when": "view == azureBoards.workItems && viewItem == workItem",
+          "when": "view == azureBoards.workItems && viewItem =~ /^workItem/",
           "group": "inline@2"
         },
         {
-          "command": "azureBoards.copyAsPrompt",
+          "command": "azureBoards.pinItem",
           "when": "view == azureBoards.workItems && viewItem == workItem",
+          "group": "navigation@0"
+        },
+        {
+          "command": "azureBoards.unpinItem",
+          "when": "view == azureBoards.workItems && viewItem == workItem.pinned",
+          "group": "navigation@0"
+        },
+        {
+          "command": "azureBoards.copyAsPrompt",
+          "when": "view == azureBoards.workItems && viewItem =~ /^workItem/",
           "group": "navigation@1"
         },
         {
           "command": "azureBoards.openInBrowser",
-          "when": "view == azureBoards.workItems && viewItem == workItem",
+          "when": "view == azureBoards.workItems && viewItem =~ /^workItem/",
           "group": "navigation@2"
         },
         {
           "command": "azureBoards.copyBranchName",
-          "when": "view == azureBoards.workItems && viewItem == workItem",
+          "when": "view == azureBoards.workItems && viewItem =~ /^workItem/",
           "group": "1_copy@1"
         },
         {
           "command": "azureBoards.copyId",
-          "when": "view == azureBoards.workItems && viewItem == workItem",
+          "when": "view == azureBoards.workItems && viewItem =~ /^workItem/",
           "group": "1_copy@2"
         },
         {
           "command": "azureBoards.copyUrl",
-          "when": "view == azureBoards.workItems && viewItem == workItem",
+          "when": "view == azureBoards.workItems && viewItem =~ /^workItem/",
           "group": "1_copy@3"
         }
       ],
@@ -301,6 +349,14 @@
         },
         {
           "command": "azureBoards.copyAsPrompt",
+          "when": "false"
+        },
+        {
+          "command": "azureBoards.pinItem",
+          "when": "false"
+        },
+        {
+          "command": "azureBoards.unpinItem",
           "when": "false"
         }
       ]
@@ -355,6 +411,38 @@
           "type": "boolean",
           "default": false,
           "description": "Only show work items in each project's current iteration (default team's current sprint).",
+          "scope": "application"
+        },
+        "azureBoards.pinned": {
+          "type": "array",
+          "default": [],
+          "description": "Work items pinned to the top of the tree. Managed via the pin button on each row.",
+          "scope": "application",
+          "items": {
+            "type": "object",
+            "properties": {
+              "projectId": {
+                "type": "string"
+              },
+              "projectName": {
+                "type": "string"
+              },
+              "id": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "projectId",
+              "projectName",
+              "id"
+            ]
+          }
+        },
+        "azureBoards.staleAfterDays": {
+          "type": "number",
+          "default": 14,
+          "minimum": 0,
+          "description": "Show a 'Nd' hint on work items not touched in N days. 0 disables the hint.",
           "scope": "application"
         },
         "azureBoards.autoRefreshMinutes": {

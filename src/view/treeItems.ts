@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import { WorkItem } from '../azure/workItems';
-import { Subscription } from '../state/config';
+import { getStaleAfterDays, Subscription } from '../state/config';
 import { htmlToText } from '../util/html';
 import { workItemUri } from './decorationProvider';
 
-export type Node = ProjectNode | WorkItemNode | MessageNode;
+export type Node = ProjectNode | PinnedGroupNode | WorkItemNode | MessageNode;
 
 export class ProjectNode extends vscode.TreeItem {
   readonly kind = 'project' as const;
@@ -20,6 +20,17 @@ export class ProjectNode extends vscode.TreeItem {
   }
 }
 
+export class PinnedGroupNode extends vscode.TreeItem {
+  readonly kind = 'pinnedGroup' as const;
+  constructor(count: number) {
+    super('Pinned', vscode.TreeItemCollapsibleState.Expanded);
+    this.contextValue = 'pinnedGroup';
+    this.iconPath = new vscode.ThemeIcon('pinned');
+    this.id = 'pinned';
+    this.description = `${count}`;
+  }
+}
+
 export class WorkItemNode extends vscode.TreeItem {
   readonly kind = 'workItem' as const;
   readonly url: string;
@@ -27,14 +38,17 @@ export class WorkItemNode extends vscode.TreeItem {
   constructor(
     public readonly projectName: string,
     public readonly workItem: WorkItem,
-    orgUrl: string
+    orgUrl: string,
+    options?: { isPinned?: boolean; underPinnedGroup?: boolean }
   ) {
     super(`#${workItem.id}  ${workItem.title}`, vscode.TreeItemCollapsibleState.None);
-    this.contextValue = 'workItem';
+    this.contextValue = options?.isPinned ? 'workItem.pinned' : 'workItem';
 
     const parts = [workItem.state.toUpperCase()];
     if (workItem.assignedTo) parts.push(workItem.assignedTo);
     else parts.push('Unassigned');
+    const stale = staleDaysLabel(workItem.changedDate);
+    if (stale) parts.push(stale);
     this.description = parts.join('  ·  ');
 
     this.iconPath = new vscode.ThemeIcon(iconNameForType(workItem.type), colorForType(workItem.type));
@@ -49,7 +63,8 @@ export class WorkItemNode extends vscode.TreeItem {
     }
 
     this.url = `${orgUrl}/${encodeURIComponent(projectName)}/_workitems/edit/${workItem.id}`;
-    this.id = `wi:${projectName}:${workItem.id}`;
+    const scope = options?.underPinnedGroup ? 'pinned' : 'project';
+    this.id = `wi:${scope}:${projectName}:${workItem.id}`;
     // Intentionally no `command` — click just selects, actions are explicit.
   }
 }
@@ -82,6 +97,15 @@ function iconNameForType(type: string): string {
     default:
       return 'circle-outline';
   }
+}
+
+function staleDaysLabel(changedDate: string | undefined): string | undefined {
+  const threshold = getStaleAfterDays();
+  if (threshold <= 0 || !changedDate) return undefined;
+  const t = new Date(changedDate).getTime();
+  if (Number.isNaN(t)) return undefined;
+  const days = Math.floor((Date.now() - t) / 86400000);
+  return days >= threshold ? `${days}d` : undefined;
 }
 
 function colorForType(type: string): vscode.ThemeColor | undefined {

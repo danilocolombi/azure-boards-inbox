@@ -1,13 +1,17 @@
 import * as vscode from 'vscode';
 import { AzureClient } from '../azure/client';
 import { getWorkItemDetails } from '../azure/workItems';
-import { htmlToText } from '../util/html';
 import { WorkItemNode } from './treeItems';
 
-interface CommentDto {
-  author: string;
-  dateLabel: string;
-  body: string;
+interface PullRequestDto {
+  id: number;
+  title: string;
+  status: 'draft' | 'active' | 'completed' | 'abandoned' | 'unknown';
+  statusLabel: string;
+  repoName: string | undefined;
+  sourceBranch: string | undefined;
+  targetBranch: string | undefined;
+  url: string;
 }
 
 interface Header {
@@ -20,10 +24,10 @@ interface Header {
 type State =
   | { kind: 'empty' }
   | { kind: 'loading'; header: Header }
-  | { kind: 'loaded'; header: Header; comments: CommentDto[] }
+  | { kind: 'loaded'; header: Header; pullRequests: PullRequestDto[] }
   | { kind: 'error'; header: Header; message: string };
 
-export class CommentsViewProvider implements vscode.WebviewViewProvider {
+export class PullRequestsViewProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined;
   private requestId = 0;
   private lastState: State = { kind: 'empty' };
@@ -37,7 +41,6 @@ export class CommentsViewProvider implements vscode.WebviewViewProvider {
     webviewView.onDidDispose(() => {
       this.view = undefined;
     });
-    // Re-send the last state when the view becomes visible again.
     webviewView.onDidChangeVisibility(() => {
       if (webviewView.visible) this.post(this.lastState);
     });
@@ -61,12 +64,17 @@ export class CommentsViewProvider implements vscode.WebviewViewProvider {
     try {
       const d = await getWorkItemDetails(this.client, node.workItem.id, node.projectName);
       if (id !== this.requestId) return;
-      const comments: CommentDto[] = d.comments.map((c) => ({
-        author: c.author,
-        dateLabel: relativeDate(c.createdDate),
-        body: htmlToText(c.text) ?? ''
+      const pullRequests: PullRequestDto[] = d.pullRequests.map((p) => ({
+        id: p.id,
+        title: p.title,
+        status: p.status,
+        statusLabel: prStatusLabel(p.status),
+        repoName: p.repoName,
+        sourceBranch: p.sourceBranch,
+        targetBranch: p.targetBranch,
+        url: p.url
       }));
-      this.setState({ kind: 'loaded', header, comments });
+      this.setState({ kind: 'loaded', header, pullRequests });
     } catch (err) {
       if (id !== this.requestId) return;
       const message = err instanceof Error ? err.message : String(err);
@@ -84,16 +92,14 @@ export class CommentsViewProvider implements vscode.WebviewViewProvider {
   }
 }
 
-function relativeDate(iso: string): string {
-  if (!iso) return '';
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return iso.slice(0, 10);
-  const diff = (Date.now() - t) / 1000;
-  if (diff < 60) return 'just now';
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 86400 * 7) return `${Math.floor(diff / 86400)}d ago`;
-  return new Date(iso).toLocaleDateString();
+function prStatusLabel(status: PullRequestDto['status']): string {
+  switch (status) {
+    case 'draft': return 'Draft';
+    case 'active': return 'Active';
+    case 'completed': return 'Merged';
+    case 'abandoned': return 'Abandoned';
+    default: return 'PR';
+  }
 }
 
 function nonce(): string {
@@ -119,18 +125,24 @@ function renderHtml(webview: vscode.Webview): string {
   .header .meta { color: var(--vscode-descriptionForeground); font-size: 0.9em; margin-top: 2px; }
   .header a { color: var(--vscode-textLink-foreground); text-decoration: none; }
   .header a:hover { text-decoration: underline; }
-  .comment { padding: 0; }
-  .comment + .comment { margin-top: 16px; }
-  .comment .who { font-weight: 600; }
-  .comment .when { color: var(--vscode-descriptionForeground); margin-left: 6px; font-size: 0.9em; }
-  .comment .body { margin-top: 4px; white-space: pre-wrap; word-break: break-word; }
+  .pr { padding: 0; }
+  .pr + .pr { margin-top: 12px; }
+  .pr-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .pr-status { font-size: 0.72em; font-weight: 600; padding: 1px 6px; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.04em; flex-shrink: 0; }
+  .pr-status-active { background: rgba(55,148,255,0.18); color: #3794ff; }
+  .pr-status-draft { background: rgba(157,157,157,0.18); color: var(--vscode-descriptionForeground); }
+  .pr-status-completed { background: rgba(78,201,176,0.18); color: #4ec9b0; }
+  .pr-status-abandoned { background: rgba(244,135,113,0.18); color: #f48771; }
+  .pr-status-unknown { background: rgba(157,157,157,0.18); color: var(--vscode-descriptionForeground); }
+  .pr-title { color: var(--vscode-foreground); text-decoration: none; }
+  .pr-title:hover { text-decoration: underline; }
+  .pr-meta { color: var(--vscode-descriptionForeground); font-size: 0.9em; margin-top: 2px; }
   .error { color: var(--vscode-errorForeground); }
 </style>
 </head>
 <body>
-<div id="root"><div class="empty">Select a work item to see its comments.</div></div>
+<div id="root"><div class="empty">Select a work item to see its pull requests.</div></div>
 <script nonce="${n}">
-  const vscode = acquireVsCodeApi();
   const root = document.getElementById('root');
   function escapeHtml(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -141,22 +153,29 @@ function renderHtml(webview: vscode.Webview): string {
       + '<div class="meta"><a href="' + escapeHtml(h.url) + '">Open in Azure DevOps</a></div>'
       + '</div>';
   }
-  function renderComments(comments) {
-    if (comments.length === 0) return '<div class="empty">No comments yet.</div>';
-    return comments.map(c =>
-      '<div class="comment">'
-      + '<div><span class="who">' + escapeHtml(c.author) + '</span><span class="when">' + escapeHtml(c.dateLabel) + '</span></div>'
-      + '<div class="body">' + escapeHtml(c.body) + '</div>'
-      + '</div>'
-    ).join('');
+  function renderPRs(prs) {
+    if (!prs || prs.length === 0) return '<div class="empty">No linked pull requests.</div>';
+    return prs.map(function (p) {
+      var meta = [];
+      if (p.repoName) meta.push(p.repoName);
+      if (p.sourceBranch && p.targetBranch) meta.push(p.sourceBranch + ' → ' + p.targetBranch);
+      var metaHtml = meta.length ? '<div class="pr-meta">' + escapeHtml(meta.join(' · ')) + '</div>' : '';
+      return '<div class="pr">'
+        + '<div class="pr-row">'
+        + '<span class="pr-status pr-status-' + escapeHtml(p.status) + '">' + escapeHtml(p.statusLabel) + '</span>'
+        + '<a class="pr-title" href="' + escapeHtml(p.url) + '">PR #' + p.id + ' — ' + escapeHtml(p.title) + '</a>'
+        + '</div>'
+        + metaHtml
+        + '</div>';
+    }).join('');
   }
   function render(state) {
     if (state.kind === 'empty') {
-      root.innerHTML = '<div class="empty">Select a work item to see its comments.</div>';
+      root.innerHTML = '<div class="empty">Select a work item to see its pull requests.</div>';
     } else if (state.kind === 'loading') {
       root.innerHTML = renderHeader(state.header) + '<div class="muted">Loading…</div>';
     } else if (state.kind === 'loaded') {
-      root.innerHTML = renderHeader(state.header) + renderComments(state.comments);
+      root.innerHTML = renderHeader(state.header) + renderPRs(state.pullRequests);
     } else if (state.kind === 'error') {
       root.innerHTML = renderHeader(state.header) + '<div class="error">' + escapeHtml(state.message) + '</div>';
     }

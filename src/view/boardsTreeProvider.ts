@@ -5,12 +5,14 @@ import {
   getAssignedToMeOnly,
   getCurrentIterationOnly,
   getOrganizationUrl,
+  getPinned,
   getShowClosed,
   getSubscriptions,
+  isPinned,
   setSubscriptions,
   Subscription
 } from '../state/config';
-import { MessageNode, Node, ProjectNode, WorkItemNode } from './treeItems';
+import { MessageNode, Node, PinnedGroupNode, ProjectNode, WorkItemNode } from './treeItems';
 
 const DND_MIME = 'application/vnd.code.tree.azureboardsworkitems';
 const CACHE_KEY = 'azureBoards.cache.v1';
@@ -66,6 +68,24 @@ export class BoardsTreeProvider
     this._onDidChangeCounts.fire();
   }
 
+  /** Rebuild cached nodes from existing WorkItem data (no refetch). */
+  rerender(): void {
+    const orgUrl = getOrganizationUrl();
+    for (const [projectId, entry] of this.cache) {
+      if (!entry.nodes) continue;
+      const sub = getSubscriptions().find((s) => s.projectId === projectId);
+      const projectName = sub?.projectName ?? entry.nodes[0]?.projectName;
+      if (!projectName) continue;
+      entry.nodes = entry.nodes.map(
+        (n) =>
+          new WorkItemNode(projectName, n.workItem, orgUrl, {
+            isPinned: isPinned(n.workItem.id, projectId)
+          })
+      );
+    }
+    this._onDidChangeTreeData.fire();
+  }
+
   getTreeItem(element: Node): vscode.TreeItem {
     return element;
   }
@@ -81,7 +101,17 @@ export class BoardsTreeProvider
       if (!this.signedIn) return [];
       const subs = getSubscriptions();
       if (subs.length === 0) return [];
-      return subs.map((s) => new ProjectNode(s, this.getProjectItemCount(s.projectId)));
+      const top: Node[] = [];
+      const pinnedNodes = this.getPinnedNodes();
+      if (pinnedNodes.length > 0) top.push(new PinnedGroupNode(pinnedNodes.length));
+      for (const s of subs) {
+        top.push(new ProjectNode(s, this.getProjectItemCount(s.projectId)));
+      }
+      return top;
+    }
+    if (element instanceof PinnedGroupNode) {
+      const nodes = this.getPinnedNodes();
+      return nodes.length === 0 ? [new MessageNode('(no pinned items loaded)', 'pinned')] : nodes;
     }
     if (element instanceof ProjectNode) {
       return this.getProjectChildren(element.subscription);
@@ -101,6 +131,48 @@ export class BoardsTreeProvider
     return getSubscriptions().map((s) => new ProjectNode(s, this.getProjectItemCount(s.projectId)));
   }
 
+  /** Find a loaded WorkItemNode by work item id across all cached projects. */
+  findCachedWorkItem(id: number): WorkItemNode | undefined {
+    for (const entry of this.cache.values()) {
+      if (!entry.nodes) continue;
+      const hit = entry.nodes.find((n) => n.workItem.id === id);
+      if (hit) return hit;
+    }
+    return undefined;
+  }
+
+  /**
+   * Build a WorkItemNode for each pinned entry that has loaded data. Pins
+   * whose source project isn't loaded yet are skipped silently.
+   */
+  private getPinnedNodes(): WorkItemNode[] {
+    const orgUrl = getOrganizationUrl();
+    const out: WorkItemNode[] = [];
+    for (const p of getPinned()) {
+      const projectEntry = this.cache.get(p.projectId);
+      const live = projectEntry?.nodes?.find((n) => n.workItem.id === p.id);
+      if (live) {
+        out.push(
+          new WorkItemNode(live.projectName, live.workItem, orgUrl, {
+            isPinned: true,
+            underPinnedGroup: true
+          })
+        );
+        continue;
+      }
+      const persisted = this.persisted[p.projectId]?.items.find((wi) => wi.id === p.id);
+      if (persisted) {
+        out.push(
+          new WorkItemNode(p.projectName, persisted, orgUrl, {
+            isPinned: true,
+            underPinnedGroup: true
+          })
+        );
+      }
+    }
+    return out;
+  }
+
   private getProjectItemCount(projectId: string): number | undefined {
     const entry = this.cache.get(projectId);
     if (entry?.nodes) return entry.nodes.length;
@@ -118,7 +190,12 @@ export class BoardsTreeProvider
     const loadPromise = this.loadProject(sub);
     if (persisted) {
       const orgUrl = getOrganizationUrl();
-      const nodes = persisted.items.map((wi) => new WorkItemNode(sub.projectName, wi, orgUrl));
+      const nodes = persisted.items.map(
+        (wi) =>
+          new WorkItemNode(sub.projectName, wi, orgUrl, {
+            isPinned: isPinned(wi.id, sub.projectId)
+          })
+      );
       this.cache.set(sub.projectId, { loading: true, nodes, loadPromise });
       return this.renderNodes(nodes);
     }
@@ -151,7 +228,12 @@ export class BoardsTreeProvider
         }),
         countAssignedToMeOpen(this.client, sub.projectName).catch(() => 0)
       ]);
-      const nodes = items.map((wi) => new WorkItemNode(sub.projectName, wi, orgUrl));
+      const nodes = items.map(
+        (wi) =>
+          new WorkItemNode(sub.projectName, wi, orgUrl, {
+            isPinned: isPinned(wi.id, sub.projectId)
+          })
+      );
       this.cache.set(sub.projectId, { loading: false, nodes });
       this.meOpenCounts.set(sub.projectId, meCount);
       await this.persist(sub.projectId, items, meCount);

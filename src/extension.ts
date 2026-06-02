@@ -3,12 +3,16 @@ import { AuthService } from './auth/authService';
 import { AzureClient } from './azure/client';
 import { manageSubscriptions } from './commands/subscriptions';
 import { copyAsPrompt } from './commands/chat';
+import { openItem } from './commands/openItem';
+import { pinItem, unpinItem } from './commands/pin';
 import { editPromptTemplate, registerPromptTemplateSync } from './commands/promptTemplate';
 import { copyBranchName, copyId, copyUrl, openInBrowser } from './commands/workItemActions';
+import { BranchWorkItemWatcher } from './git/branchWatcher';
 import {
   getAssignedToMeOnly,
   getAutoRefreshMinutes,
   getCurrentIterationOnly,
+  getOrganizationUrl,
   getShowClosed,
   getSubscriptions,
   setAssignedToMeOnly,
@@ -18,6 +22,7 @@ import {
 import { BoardsTreeProvider } from './view/boardsTreeProvider';
 import { CommentsViewProvider } from './view/commentsView';
 import { WorkItemDecorationProvider } from './view/decorationProvider';
+import { PullRequestsViewProvider } from './view/pullRequestsView';
 import { WorkItemNode } from './view/treeItems';
 
 let autoRefreshTimer: NodeJS.Timeout | undefined;
@@ -48,8 +53,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   const commentsProvider = new CommentsViewProvider(client);
+  const pullRequestsProvider = new PullRequestsViewProvider(client);
   context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider('azureBoards.comments', commentsProvider)
+    vscode.window.registerWebviewViewProvider('azureBoards.comments', commentsProvider),
+    vscode.window.registerWebviewViewProvider('azureBoards.pullRequests', pullRequestsProvider)
   );
 
   let selectionTimer: NodeJS.Timeout | undefined;
@@ -58,8 +65,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (selectionTimer) clearTimeout(selectionTimer);
       const first = e.selection[0];
       selectionTimer = setTimeout(() => {
-        if (first instanceof WorkItemNode) void commentsProvider.showFor(first);
-        else commentsProvider.clear();
+        if (first instanceof WorkItemNode) {
+          void commentsProvider.showFor(first);
+          void pullRequestsProvider.showFor(first);
+        } else {
+          commentsProvider.clear();
+          pullRequestsProvider.clear();
+        }
       }, 200);
     })
   );
@@ -81,6 +93,51 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     view.badge = count > 0 ? { value: count, tooltip: `${count} work items assigned to you` } : undefined;
   };
   context.subscriptions.push(provider.onDidChangeCounts(() => void updateStatusBar()));
+
+  // Branch-aware status bar: shows the work item linked to the current branch.
+  const branchStatus = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 99);
+  branchStatus.command = 'azureBoards.openCurrentBranchItem';
+  context.subscriptions.push(branchStatus);
+  const branchWatcher = new BranchWorkItemWatcher();
+  context.subscriptions.push(branchWatcher);
+
+  const updateBranchStatus = () => {
+    const id = branchWatcher.current;
+    if (!id) {
+      branchStatus.hide();
+      return;
+    }
+    const node = provider.findCachedWorkItem(id);
+    const title = node?.workItem.title;
+    branchStatus.text = title
+      ? `$(git-branch) AB#${id} · ${title}`
+      : `$(git-branch) AB#${id}`;
+    branchStatus.tooltip = title
+      ? `${node!.workItem.type} #${id}: ${title}`
+      : `Open AB#${id}`;
+    branchStatus.show();
+  };
+  context.subscriptions.push(branchWatcher.onDidChange(updateBranchStatus));
+  // Re-evaluate when subscriptions load (we may now have the title in cache).
+  context.subscriptions.push(provider.onDidChangeCounts(updateBranchStatus));
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('azureBoards.openCurrentBranchItem', async () => {
+      const id = branchWatcher.current;
+      if (!id) return;
+      const node = provider.findCachedWorkItem(id);
+      if (node) {
+        try {
+          await view.reveal(node, { select: true, focus: true, expand: true });
+          return;
+        } catch {
+          // fall through
+        }
+      }
+      const orgUrl = getOrganizationUrl();
+      if (orgUrl) await vscode.env.openExternal(vscode.Uri.parse(`${orgUrl}/_workitems/edit/${id}`));
+    })
+  );
 
   const refreshContext = async () => {
     const signedIn = await auth.isSignedIn();
@@ -206,6 +263,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await vscode.commands.executeCommand('azureBoards.workItems.focus');
       await vscode.commands.executeCommand('list.find');
     }),
+    vscode.commands.registerCommand('azureBoards.openItem', () => openItem()),
+    vscode.commands.registerCommand('azureBoards.pinItem', (node) => pinItem(node)),
+    vscode.commands.registerCommand('azureBoards.unpinItem', (node) => unpinItem(node)),
 
     vscode.workspace.onDidChangeConfiguration(async (e) => {
       if (!e.affectsConfiguration('azureBoards')) return;
@@ -220,6 +280,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         e.affectsConfiguration('azureBoards.subscriptions')
       ) {
         provider.refresh();
+      }
+      if (
+        e.affectsConfiguration('azureBoards.pinned') ||
+        e.affectsConfiguration('azureBoards.staleAfterDays')
+      ) {
+        provider.rerender();
+      }
+      if (e.affectsConfiguration('azureBoards.branchNamePattern')) {
+        branchWatcher.refresh();
       }
     })
   );

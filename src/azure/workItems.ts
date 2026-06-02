@@ -1,6 +1,8 @@
+import { WorkItemExpand } from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces';
 import { AzureClient } from './client';
 import { CommentItem, fetchComments } from './comments';
 import { getCurrentIterationPath } from './iterations';
+import { fetchLinkedPullRequests, LinkedPullRequest } from './pullRequests';
 
 export interface WorkItem {
   id: number;
@@ -10,6 +12,7 @@ export interface WorkItem {
   assignedTo: string | undefined;
   iterationPath: string | undefined;
   description: string | undefined;
+  changedDate: string | undefined;
 }
 
 export interface WorkItemDetails {
@@ -26,6 +29,7 @@ export interface WorkItemDetails {
   acceptanceCriteria: string | undefined;
   parent: { id: number; title: string | undefined } | undefined;
   comments: CommentItem[];
+  pullRequests: LinkedPullRequest[];
 }
 
 export interface FetchOptions {
@@ -42,7 +46,8 @@ const FIELDS = [
   'System.WorkItemType',
   'System.AssignedTo',
   'System.IterationPath',
-  'System.Description'
+  'System.Description',
+  'System.ChangedDate'
 ];
 
 function buildWiql(opts: FetchOptions, currentIterationPath: string | undefined): string {
@@ -55,38 +60,52 @@ function buildWiql(opts: FetchOptions, currentIterationPath: string | undefined)
   return `SELECT [System.Id] FROM WorkItems WHERE ${where.join(' AND ')} ORDER BY [System.ChangedDate] DESC`;
 }
 
-const DETAIL_FIELDS = [
-  'System.Id',
-  'System.Title',
-  'System.WorkItemType',
-  'System.State',
-  'System.AssignedTo',
-  'System.IterationPath',
-  'System.Tags',
-  'System.Parent',
-  'System.Description',
-  'Microsoft.VSTS.Common.Priority',
-  'Microsoft.VSTS.Common.AcceptanceCriteria',
-  'Microsoft.VSTS.TCM.ReproSteps'
-];
+function toIsoDate(raw: unknown): string | undefined {
+  if (!raw) return undefined;
+  if (raw instanceof Date) return raw.toISOString();
+  const d = new Date(raw as string | number);
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+}
 
 function displayName(raw: unknown): string | undefined {
   if (typeof raw === 'string') return raw;
   return (raw as { displayName?: string } | undefined)?.displayName;
 }
 
-export async function getWorkItemDetails(
+const inflightDetails = new Map<string, Promise<WorkItemDetails>>();
+
+export function getWorkItemDetails(
+  client: AzureClient,
+  id: number,
+  projectName: string
+): Promise<WorkItemDetails> {
+  const key = `${projectName}::${id}`;
+  const existing = inflightDetails.get(key);
+  if (existing) return existing;
+  const p = fetchWorkItemDetails(client, id, projectName);
+  inflightDetails.set(key, p);
+  void p.finally(() => inflightDetails.delete(key));
+  return p;
+}
+
+async function fetchWorkItemDetails(
   client: AzureClient,
   id: number,
   projectName: string
 ): Promise<WorkItemDetails> {
   const conn = await client.get();
   const wit = await conn.getWorkItemTrackingApi();
+  // expand=All fetches fields + relations in one round trip; the explicit fields
+  // list is ignored when expand is set.
   const [wi, comments] = await Promise.all([
-    wit.getWorkItem(id, DETAIL_FIELDS, undefined, undefined, projectName),
+    wit.getWorkItem(id, undefined, undefined, WorkItemExpand.All, projectName),
     fetchComments(client, projectName, id).catch(() => [] as CommentItem[])
   ]);
   const f = wi.fields ?? {};
+
+  const pullRequests = await fetchLinkedPullRequests(client, projectName, wi.relations).catch(
+    () => [] as LinkedPullRequest[]
+  );
 
   const parentId = f['System.Parent'] as number | undefined;
   let parent: WorkItemDetails['parent'];
@@ -112,7 +131,8 @@ export async function getWorkItemDetails(
     reproSteps: f['Microsoft.VSTS.TCM.ReproSteps'] as string | undefined,
     acceptanceCriteria: f['Microsoft.VSTS.Common.AcceptanceCriteria'] as string | undefined,
     parent,
-    comments
+    comments,
+    pullRequests
   };
 }
 
@@ -159,7 +179,8 @@ export async function fetchWorkItems(client: AzureClient, opts: FetchOptions): P
         type: (f['System.WorkItemType'] as string) ?? '',
         assignedTo: assigned,
         iterationPath: f['System.IterationPath'] as string | undefined,
-        description: f['System.Description'] as string | undefined
+        description: f['System.Description'] as string | undefined,
+        changedDate: toIsoDate(f['System.ChangedDate'])
       });
     }
   }

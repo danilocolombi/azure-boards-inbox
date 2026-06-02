@@ -8,6 +8,12 @@ export interface Subscription {
   order: number;
 }
 
+export interface PinnedItem {
+  projectId: string;
+  projectName: string;
+  id: number;
+}
+
 function cfg() {
   return vscode.workspace.getConfiguration(SECTION);
 }
@@ -52,6 +58,23 @@ export function getCurrentIterationOnly(): boolean {
 
 export async function setCurrentIterationOnly(v: boolean): Promise<void> {
   await cfg().update('currentIterationOnly', v, vscode.ConfigurationTarget.Global);
+}
+
+export function getPinned(): PinnedItem[] {
+  return cfg().get<PinnedItem[]>('pinned') ?? [];
+}
+
+export async function setPinned(items: PinnedItem[]): Promise<void> {
+  await cfg().update('pinned', items, vscode.ConfigurationTarget.Global);
+}
+
+export function isPinned(id: number, projectId: string): boolean {
+  return getPinned().some((p) => p.id === id && p.projectId === projectId);
+}
+
+export function getStaleAfterDays(): number {
+  const n = cfg().get<number>('staleAfterDays') ?? 14;
+  return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
 export function getAutoRefreshMinutes(): number {

@@ -104,11 +104,14 @@ npm run screenshots     # regenerate README images (needs @vscode/codicons)
 
 Press **F5** in VS Code to launch the Extension Development Host.
 
-Tagged releases (`v*.*.*`) publish to the Marketplace via [`.github/workflows/publish.yml`](.github/workflows/publish.yml). Requires a `VSCE_PAT` repo secret (Azure DevOps PAT, *Marketplace → Manage*).
+Tagged releases (`v*.*.*`) publish via [`.github/workflows/publish.yml`](.github/workflows/publish.yml) to **both**:
+
+- **VS Code Marketplace** — requires a `VSCE_PAT` repo secret (Azure DevOps PAT, *Marketplace → Manage*).
+- **Open VSX Registry** — what **Cursor**, VSCodium, Windsurf and other VS Code forks install from. Requires an `OVSX_PAT` repo secret ([open-vsx.org](https://open-vsx.org) → user menu → *Access Tokens*). One-time setup: sign the Eclipse Foundation Publisher Agreement and own the `danilocolombi` namespace (CI runs `ovsx create-namespace`). If `OVSX_PAT` is unset the Open VSX step is skipped.
 
 ```sh
 npm version patch        # bump + tag
-git push --follow-tags   # CI publishes
+git push --follow-tags   # CI publishes to both registries
 ```
 
 ## License

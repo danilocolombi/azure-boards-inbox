@@ -10,6 +10,7 @@ All notable changes to **Azure Boards Inbox** are documented here.
 - Composer niceties: live Markdown **preview**, auto-growing textarea, working **undo/redo** on toolbar actions.
 - **Comments now render formatting and images.** Bodies display as sanitized HTML; Azure DevOps attachment images (which require auth) are inlined through your PAT so they actually show. Comment cards are visually separated for readability.
 - **Refresh** now also re-fetches the comments and pull requests of the selected work item.
+- **Now available in Cursor** (and VSCodium, Windsurf, and other VS Code forks) — releases publish to the Open VSX Registry alongside the VS Code Marketplace.
 - Minimum VS Code version raised to 1.90 (Language Model API).
 
 ## 0.2.0

@@ -70,7 +70,10 @@ src/
 
 ## Release pipeline
 
-`.github/workflows/publish.yml` triggers on tag push `v*.*.*` (or manual dispatch). It type-checks, builds, packages, verifies tag matches `package.json` version, publishes via `vsce` using the `VSCE_PAT` secret, and creates a GitHub Release with the `.vsix` attached.
+`.github/workflows/publish.yml` triggers on tag push `v*.*.*` (or manual dispatch). It type-checks, builds, packages, verifies tag matches `package.json` version, publishes to **two** registries from the one `.vsix`, and creates a GitHub Release with it attached:
+
+- **VS Code Marketplace** via `vsce` using the `VSCE_PAT` secret.
+- **Open VSX Registry** via `ovsx` using the `OVSX_PAT` secret — this is the registry **Cursor** (and VSCodium/Windsurf/etc.) install from; the MS Marketplace is not available to forks. The step is **guarded** (`if: env.OVSX_PAT != ''`) so a missing token skips Open VSX rather than failing the release. The namespace must match `publisher` (`danilocolombi`) and requires a signed Eclipse Publisher Agreement; CI runs `ovsx create-namespace … || true` to be self-healing.
 
 To cut a release:
 

@@ -72,6 +72,14 @@ export function isPinned(id: number, projectId: string): boolean {
   return getPinned().some((p) => p.id === id && p.projectId === projectId);
 }
 
+export function getCommentsEnabled(): boolean {
+  return cfg().get<boolean>('enableComments') ?? false;
+}
+
+export async function setCommentsEnabled(v: boolean): Promise<void> {
+  await cfg().update('enableComments', v, vscode.ConfigurationTarget.Global);
+}
+
 export function getStaleAfterDays(): number {
   const n = cfg().get<number>('staleAfterDays') ?? 14;
   return Number.isFinite(n) && n >= 0 ? n : 0;

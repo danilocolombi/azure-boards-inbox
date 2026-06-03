@@ -119,11 +119,35 @@ body {
 .comments-header { padding: 8px 12px 6px 12px; border-bottom: 1px solid #3c3c3c; }
 .comments-header .ctitle { font-weight: 600; color: #cccccc; }
 .comments-header .clink { color: #3794ff; font-size: 12px; margin-top: 2px; display: block; }
-.comments-list { padding: 4px 12px 12px 12px; overflow: auto; }
-.comment + .comment { border-top: 1px solid #3c3c3c; margin-top: 8px; padding-top: 8px; }
+.comments-list { padding: 8px 12px 12px 12px; overflow: auto; }
+.comment { padding: 8px 10px; border: 1px solid #3c3c3c; border-radius: 6px; background: #ffffff08; }
+.comment + .comment { margin-top: 8px; }
 .comment .who { font-weight: 600; color: #cccccc; }
 .comment .when { color: #9d9d9d; margin-left: 6px; font-size: 12px; }
-.comment .body { margin-top: 4px; white-space: pre-wrap; color: #d4d4d4; }
+.comment .body { margin-top: 6px; color: #d4d4d4; line-height: 1.5; }
+.comment .body p { margin: 0 0 6px; }
+.comment .body p:last-child { margin-bottom: 0; }
+.comment .body ul { margin: 4px 0; padding-left: 20px; }
+.comment .body code { font-family: "Cascadia Code", Menlo, Consolas, monospace; background: #ffffff14; padding: 0 3px; border-radius: 3px; font-size: 0.92em; }
+.comment .body img { display: block; max-width: 100%; border-radius: 4px; margin: 8px 0 2px; border: 1px solid #3c3c3c; }
+
+/* Comment composer */
+.composer { padding: 10px 12px 12px; border-top: 1px solid #3c3c3c; }
+.composer .toolbar { display: flex; gap: 2px; margin-bottom: 6px; }
+.composer .toolbar button { background: transparent; color: #cccccc; border: 1px solid transparent; border-radius: 4px; padding: 3px 7px; font-size: 12px; min-width: 26px; cursor: default; }
+.composer .draft { width: 100%; min-height: 88px; box-sizing: border-box; background: #3c3c3c; color: #d4d4d4; border: 1px solid #5a5a5a; border-radius: 4px; padding: 7px 8px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; }
+.composer .preview-label { color: #9d9d9d; font-size: 12px; margin: 8px 0 4px; }
+.composer .preview { padding: 6px 8px; border: 1px dashed #4a4a4a; border-radius: 4px; color: #d4d4d4; line-height: 1.5; }
+.composer .preview p { margin: 0 0 6px; }
+.composer .preview p:last-child { margin-bottom: 0; }
+.composer .preview ul { margin: 4px 0; padding-left: 20px; }
+.composer .preview strong { color: #e6e6e6; }
+.composer .actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.composer .actions .spacer { flex: 1; }
+.composer .btn { border: none; border-radius: 4px; padding: 5px 14px; font-size: 13px; cursor: default; }
+.composer .btn-primary { background: #0e639c; color: #ffffff; }
+.composer .btn-ghost { background: transparent; color: #9d9d9d; border: 1px solid #5a5a5a; display: inline-flex; align-items: center; gap: 5px; }
+.composer .hint { color: #9d9d9d; font-size: 12px; margin-top: 6px; }
 
 /* Context menu */
 .context-menu {
@@ -264,7 +288,22 @@ const SELECTED_TYPE_LABEL = 'Bug';
 const SELECTED_ID = 271;
 const SELECTED_URL = 'https://dev.azure.com/contoso/Roadmap/_workitems/edit/271';
 
-function commentsBlockWithThread() {
+const MOCK_SCREENSHOT =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="150">
+    <rect width="320" height="150" rx="6" fill="#fbfbfb"/>
+    <rect width="320" height="26" fill="#e8e8e8"/>
+    <circle cx="15" cy="13" r="4" fill="#ff5f57"/>
+    <circle cx="31" cy="13" r="4" fill="#febc2e"/>
+    <circle cx="47" cy="13" r="4" fill="#28c840"/>
+    <rect x="68" y="7" width="238" height="12" rx="6" fill="#ffffff"/>
+    <text x="20" y="66" font-family="Segoe UI, sans-serif" font-size="14" font-weight="bold" fill="#c0392b">Redirect loop detected</text>
+    <text x="20" y="92" font-family="Segoe UI, sans-serif" font-size="12" fill="#555">The page isn't redirecting properly.</text>
+    <text x="20" y="112" font-family="monospace" font-size="12" fill="#888">ERR_TOO_MANY_REDIRECTS</text>
+    <rect x="20" y="126" width="110" height="14" rx="3" fill="#ededed"/>
+  </svg>`);
+
+function commentsBlockWithThread({ composer = false } = {}) {
   return `
     <div class="comments-header">
       <div class="ctitle">${SELECTED_TYPE_LABEL} #${SELECTED_ID}: ${SELECTED_TITLE}</div>
@@ -273,16 +312,51 @@ function commentsBlockWithThread() {
     <div class="comments-list">
       <div class="comment">
         <div><span class="who">Maria Souza</span><span class="when">2d ago</span></div>
-        <div class="body">Repro'd in staging — only happens when the IdP times out. Looks like we're not handling the timeout case at all.</div>
+        <div class="body">
+          <p>Repro'd in <strong>staging</strong> — only when the IdP times out. Here's what the user hits:</p>
+          <img src="${MOCK_SCREENSHOT}" alt="screenshot"/>
+        </div>
       </div>
       <div class="comment">
         <div><span class="who">Danilo Tavares</span><span class="when">1d ago</span></div>
-        <div class="body">Pushing a fix in PR #482, adding a fallback to local auth when the IdP exceeds 5s.</div>
+        <div class="body">
+          <p>Root cause: we never handle the timeout. Fix in PR #482 —</p>
+          <ul><li>fall back to local auth after <code>5s</code></li><li>log the IdP latency</li></ul>
+        </div>
       </div>
       <div class="comment">
         <div><span class="who">Alex Chen</span><span class="when">just now</span></div>
-        <div class="body">Verified on staging, looks good. Closing once it ships.</div>
+        <div class="body"><p>Verified on staging, looks good. Closing once it ships.</p></div>
       </div>
+    </div>
+    ${composer ? composerBlock() : ''}`;
+}
+
+function composerBlock() {
+  return `
+    <div class="composer">
+      <div class="toolbar">
+        <button><b>B</b></button>
+        <button><i>I</i></button>
+        <button>&lt;/&gt;</button>
+        <button>&#8226;</button>
+        <button>1.</button>
+        <button>&#128279;</button>
+      </div>
+      <div class="draft">Confirmed it's the **timeout** path. Workaround until the fix ships:
+- bump the IdP timeout to 10s
+- clear the SSO cookie on error</div>
+      <div class="preview-label">Preview</div>
+      <div class="preview">
+        <p>Confirmed it's the <strong>timeout</strong> path. Workaround until the fix ships:</p>
+        <ul><li>bump the IdP timeout to 10s</li><li>clear the SSO cookie on error</li></ul>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost">&#10024; Polish</button>
+        <span class="spacer"></span>
+        <button class="btn btn-primary">Comment</button>
+      </div>
+      <div class="hint">Ctrl/Cmd+Enter to comment.</div>
     </div>`;
 }
 
@@ -425,18 +499,45 @@ const SCENES = [
   },
   {
     name: 'comments-view',
-    size: [1200, 760],
+    size: [1200, 900],
     body: `
       <div class="frame">
         ${activityBar({ badge: 5 })}
         <div class="side-bar">
-          <div class="view-pane" style="flex: 0 0 220px;">
+          <div class="view-pane" style="flex: 0 0 180px;">
             ${workItemsHeader()}
             ${workItemsTree({ selectedId: 271, showPinned: false })}
           </div>
           <div class="view-pane" style="flex: 1 1 auto;">
             ${commentsHeader()}
             ${commentsBlockWithThread()}
+          </div>
+        </div>
+        <div class="editor"></div>
+      </div>
+      ${statusBar()}
+    `
+  },
+  {
+    name: 'add-comment',
+    size: [900, 780],
+    body: `
+      <div class="frame">
+        ${activityBar({ badge: 5 })}
+        <div class="side-bar">
+          <div class="view-pane" style="flex: 1 1 auto;">
+            ${commentsHeader()}
+            <div class="comments-header">
+              <div class="ctitle">${SELECTED_TYPE_LABEL} #${SELECTED_ID}: ${SELECTED_TITLE}</div>
+              <a class="clink" href="#">Open in Azure DevOps</a>
+            </div>
+            <div class="comments-list">
+              <div class="comment">
+                <div><span class="who">Alex Chen</span><span class="when">2h ago</span></div>
+                <div class="body"><p>Any workaround while we wait for the fix?</p></div>
+              </div>
+            </div>
+            ${composerBlock()}
           </div>
         </div>
         <div class="editor"></div>

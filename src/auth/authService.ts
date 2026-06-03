@@ -56,4 +56,23 @@ export class AuthService {
     await this.setPat(pat.trim());
     return true;
   }
+
+  /**
+   * Replace the stored PAT with a write-scoped one. A write PAT is a superset of
+   * a read PAT, so it keeps every read feature working — we just overwrite in place.
+   * Used by the opt-in "Enable Adding Comments" flow; sign-in stays read-only.
+   */
+  async promptWritePat(): Promise<boolean> {
+    if (!getOrganizationUrl()) return this.promptSignIn();
+    const pat = await vscode.window.showInputBox({
+      title: 'Azure DevOps Personal Access Token (Read & Write)',
+      prompt: 'Adding comments needs a PAT with Work Items (Read & Write) scope',
+      password: true,
+      ignoreFocusOut: true,
+      validateInput: (v) => (v && v.trim().length > 0 ? null : 'Required')
+    });
+    if (!pat) return false;
+    await this.setPat(pat.trim());
+    return true;
+  }
 }

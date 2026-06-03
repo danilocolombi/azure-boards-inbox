@@ -5,7 +5,7 @@
   "version": "0.2.0",
   "publisher": "danilocolombi",
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.90.0"
   },
   "categories": [
     "Other"
@@ -183,6 +183,11 @@
       {
         "command": "azureBoards.openCurrentBranchItem",
         "title": "Open Current Branch Item",
+        "category": "Azure Boards"
+      },
+      {
+        "command": "azureBoards.enableComments",
+        "title": "Enable Adding Comments",
         "category": "Azure Boards"
       },
       {
@@ -438,6 +443,12 @@
             ]
           }
         },
+        "azureBoards.enableComments": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Allow adding comments to work items from the Comments view. Off by default so the extension only needs a read-only token. Enabling it prompts for a Personal Access Token with **Work Items (Read & Write)**. Drafting is manual; an optional **Polish with AI** button appears only when you have a language model configured in your editor (e.g. GitHub Copilot) and sends only your draft to your own model.",
+          "scope": "application"
+        },
         "azureBoards.staleAfterDays": {
           "type": "number",
           "default": 14,
@@ -483,11 +494,12 @@
     "screenshots": "node scripts/gen-screenshots.js"
   },
   "dependencies": {
-    "azure-devops-node-api": "^14.0.2"
+    "azure-devops-node-api": "^14.0.2",
+    "marked": "^18.0.4"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
-    "@types/vscode": "^1.85.0",
+    "@types/vscode": "^1.90.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "esbuild": "^0.20.0",

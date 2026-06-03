@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { AuthService } from './auth/authService';
 import { AzureClient } from './azure/client';
 import { manageSubscriptions } from './commands/subscriptions';
+import { enableComments } from './commands/comments';
 import { copyAsPrompt } from './commands/chat';
 import { openItem } from './commands/openItem';
 import { pinItem, unpinItem } from './commands/pin';
@@ -52,27 +53,29 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.window.registerFileDecorationProvider(new WorkItemDecorationProvider())
   );
 
-  const commentsProvider = new CommentsViewProvider(client);
+  const commentsProvider = new CommentsViewProvider(client, auth);
   const pullRequestsProvider = new PullRequestsViewProvider(client);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider('azureBoards.comments', commentsProvider),
     vscode.window.registerWebviewViewProvider('azureBoards.pullRequests', pullRequestsProvider)
   );
 
+  const showSideViews = (node: unknown) => {
+    if (node instanceof WorkItemNode) {
+      void commentsProvider.showFor(node);
+      void pullRequestsProvider.showFor(node);
+    } else {
+      commentsProvider.clear();
+      pullRequestsProvider.clear();
+    }
+  };
+
   let selectionTimer: NodeJS.Timeout | undefined;
   context.subscriptions.push(
     view.onDidChangeSelection((e) => {
       if (selectionTimer) clearTimeout(selectionTimer);
       const first = e.selection[0];
-      selectionTimer = setTimeout(() => {
-        if (first instanceof WorkItemNode) {
-          void commentsProvider.showFor(first);
-          void pullRequestsProvider.showFor(first);
-        } else {
-          commentsProvider.clear();
-          pullRequestsProvider.clear();
-        }
-      }, 200);
+      selectionTimer = setTimeout(() => showSideViews(first), 200);
     })
   );
 
@@ -184,6 +187,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('azureBoards.refresh', async () => {
       await refreshContext();
       provider.refresh();
+      showSideViews(view.selection[0]);
     }),
 
     vscode.commands.registerCommand('azureBoards.expandAll', async () => {
@@ -263,6 +267,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await vscode.commands.executeCommand('azureBoards.workItems.focus');
       await vscode.commands.executeCommand('list.find');
     }),
+    vscode.commands.registerCommand('azureBoards.enableComments', async () => {
+      if (await enableComments(auth, client)) commentsProvider.refreshComposer();
+    }),
     vscode.commands.registerCommand('azureBoards.openItem', () => openItem()),
     vscode.commands.registerCommand('azureBoards.pinItem', (node) => pinItem(node)),
     vscode.commands.registerCommand('azureBoards.unpinItem', (node) => unpinItem(node)),
@@ -289,6 +296,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
       if (e.affectsConfiguration('azureBoards.branchNamePattern')) {
         branchWatcher.refresh();
+      }
+      if (e.affectsConfiguration('azureBoards.enableComments')) {
+        commentsProvider.refreshComposer();
       }
     })
   );

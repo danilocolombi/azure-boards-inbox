@@ -4,42 +4,68 @@
 
 ![Work items, pull requests, and comments in the sidebar](media/screenshots/tree-view.png)
 
+A focused inbox for the work items on your plate — across every project — without leaving the editor. Read-only by default; commenting is opt-in.
+
 ## Features
 
-- **All your items, one tree** — assigned to you across every project, grouped and counted
-- **Pin** what you're actively working on to a section at the top
-- **Pull Requests** and **Comments** side-bar views that follow your selection
-- **Copy as Prompt** — formatted markdown for Copilot / Claude Code / any AI chat (template is editable)
-- **Branch-aware status bar** — checkout `bug/1234-fix-login` and the status bar shows `AB#1234 · <title>`
-- One-click: copy branch / `AB#1234` / URL, or open in Azure DevOps
+- **All your items, one tree** — assigned to you across every project, grouped, counted, and filterable
+- **Pull requests & comments** that follow your selection — comments render formatting and **inline images**
+- **Add comments** (opt-in) — a Markdown composer with live preview, and optional **Polish with AI** using *your own* model
+- **Copy as Prompt** — formatted Markdown for Copilot / Claude Code / any AI chat (template is editable)
+- **Branch-aware status bar** — check out `bug/1234-fix-login` and it shows `AB#1234 · <title>`
+- **One-click** copy of branch name / `AB#1234` / URL, or open in Azure DevOps
 
 ## Quick start
 
 1. Click the **Azure Boards** icon in the activity bar → **Sign in**.
-2. Paste your org URL and a [Personal Access Token](https://learn.microsoft.com/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate) (scopes: *Work Items: Read* and *Project and Team: Read*). The PAT is stored encrypted via VS Code's `SecretStorage`.
-3. **⋯ → Manage Subscriptions** to pick projects.
+2. Paste your org URL and a [Personal Access Token](https://learn.microsoft.com/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate). Default scopes: *Work Items: Read* and *Project and Team: Read*. The token is stored encrypted in VS Code's `SecretStorage`.
+3. **⋯ → Manage Subscriptions** to pick the projects you care about.
 
-That's it.
+That's it — your items show up in the tree.
 
-## Inside
+## Work items
 
-**Per-item actions** — inline: Pin, Copy as Prompt, Open in Azure DevOps. Right-click for Copy Branch Name, Copy ID (`AB#1234`), Copy URL.
+Everything assigned to you, grouped by project with live counts. **Pin** the items you're actively working on to a section at the top, and filter from the title bar (show closed, all assignees, current iteration only).
+
+Each row has inline actions and a right-click menu: **Pin**, **Copy as Prompt**, **Open in Azure DevOps**, **Copy Branch Name**, **Copy ID** (`AB#1234`), **Copy URL**.
 
 ![Per-item actions](media/screenshots/item-actions.png)
 
-**Pull Requests** — every PR linked to the selected item, with state pill and `repo · source → target`. Click to open.
+## Pull requests
+
+Every PR linked to the selected work item, with a status pill (Draft / Active / Merged / Abandoned) and `repo · source → target`. Click to open in the browser.
 
 ![Pull Requests view](media/screenshots/pull-requests-view.png)
 
-**Comments** — the discussion thread, refreshed as you change selection.
+## Comments
+
+The discussion thread for the selected item, refreshed as you change selection. Each comment is a card with its **formatting intact** (bold, lists, code) and **images rendered inline** — Azure DevOps attachment images are auth-gated, so the extension loads them through your token instead of showing broken links.
 
 ![Comments view](media/screenshots/comments-view.png)
 
-**Editable prompt template** — *Edit Prompt Template* (⋯ overflow) opens it in an editor; save to apply.
+## Adding comments
+
+Replying is **off by default** so the extension only ever needs a read-only token. When you want it, turn it on — once — and a composer appears under the thread.
+
+![Comment composer with Markdown toolbar, live preview, and Polish with AI](media/screenshots/add-comment.png)
+
+**Enable it.** Run **Azure Boards: Enable Adding Comments** (or click *Enable adding comments* in the Comments view, or flip `azureBoards.enableComments`). You'll be prompted for a Personal Access Token with **Work Items: Read & Write** — this replaces your token in place (write is a superset of read, so everything keeps working).
+
+**Write it.** Draft in Markdown with the toolbar — **bold**, *italic*, `code`, bulleted/numbered lists, links — and watch the **live preview** render exactly what will be posted. Undo/redo works as expected. Post with **Ctrl/Cmd+Enter** or the **Comment** button.
+
+**Polish it (optional).** If you have a language model configured in your editor (e.g. GitHub Copilot), a **Polish** button cleans up grammar, clarity, and formatting:
+
+- It uses **your own model** via the editor's Language Model API — **only your draft is sent**, and nothing goes to the extension author.
+- It **rewrites in place** for you to review before posting; it never posts on its own and never invents content.
+- If no model is available, the button is simply hidden — manual commenting still works everywhere, including **Cursor**.
+
+## Copy as Prompt
+
+Turn any work item into a clean Markdown prompt for an AI assistant — type, title, description, repro steps, acceptance criteria, recent comments, and a reference link. Edit the layout with **Edit Prompt Template** (⋯ overflow); it opens in an editor and applies on save.
 
 ![Editing the prompt template](media/screenshots/edit-prompt-template.png)
 
-Tokens: `{preamble}` `{id}` `{title}` `{type}` `{state}` `{priority}` `{assignedTo}` `{iteration}` `{tags}` `{parent}` `{link}` `{description}` `{reproSteps}` `{acceptanceCriteria}` `{comments}`. A line whose tokens all resolve empty is dropped.
+Tokens: `{preamble}` `{id}` `{title}` `{type}` `{state}` `{priority}` `{assignedTo}` `{iteration}` `{tags}` `{parent}` `{link}` `{description}` `{reproSteps}` `{acceptanceCriteria}` `{comments}`. A line whose tokens all resolve to empty is dropped.
 
 **Open by ID or URL** — Command Palette → *Azure Boards: Open Work Item in Browser…* → paste anything containing a work-item id.
 
@@ -51,6 +77,7 @@ Tokens: `{preamble}` `{id}` `{title}` `{type}` `{state}` `{priority}` `{assigned
 | `azureBoards.showClosed` | `false` | Include Closed / Done / Resolved / Removed |
 | `azureBoards.assignedToMeOnly` | `true` | Only items assigned to me |
 | `azureBoards.currentIterationOnly` | `false` | Only items in the current sprint |
+| `azureBoards.enableComments` | `false` | Turn on the Comments composer (prompts for a Read & Write token; enables optional AI polish) |
 | `azureBoards.staleAfterDays` | `14` | Show a `· Nd` hint on items not touched in N days (`0` disables) |
 | `azureBoards.autoRefreshMinutes` | `0` | Auto-refresh interval (`0` = off) |
 | `azureBoards.branchNamePattern` | `{type}/{id}-{title}` | Used by Copy Branch Name and the branch-aware status bar |
@@ -62,8 +89,10 @@ All commands live under the **Azure Boards** category in the Command Palette.
 ## Troubleshooting
 
 - **No items showing.** Subscribe to a project (⋯ → *Manage Subscriptions*) and check the title-bar filters.
-- **Sign-in keeps coming back.** PAT likely expired — re-run *Sign In*.
-- **"Current iteration" filter is empty.** It uses each project's *default team*. Sprints under other teams won't show.
+- **Sign-in keeps coming back.** The token likely expired — re-run *Sign In*.
+- **Can't add a comment / "lacks write access".** Run *Enable Adding Comments* and paste a token with **Work Items: Read & Write**.
+- **No "Polish" button.** It only appears when your editor has a language model available (e.g. GitHub Copilot signed in).
+- **"Current iteration" filter is empty.** It uses each project's *default team*; sprints under other teams won't show.
 
 ## Develop & release
 

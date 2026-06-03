@@ -2,6 +2,16 @@
 
 All notable changes to **Azure Boards Inbox** are documented here.
 
+## 0.3.0
+
+- **Add comments to work items** — opt-in (`azureBoards.enableComments`, off by default). Run *Enable Adding Comments* to turn on a composer in the Comments view; it prompts for a Personal Access Token with *Work Items: Read & Write* (a superset of the read-only token used otherwise). Default sign-in and all read features stay read-only.
+- **Markdown toolbar** in the composer (bold, italic, code, bulleted/numbered list, link); post with **Ctrl/Cmd+Enter**. Drafts are converted to HTML on post via `marked`.
+- **Polish with AI** (optional) — rewrites your draft using *your own* configured language model via the editor's Language Model API. Only the draft is sent. The button appears only when a model is available (e.g. GitHub Copilot) and is otherwise hidden, so manual commenting works everywhere, including Cursor.
+- Composer niceties: live Markdown **preview**, auto-growing textarea, working **undo/redo** on toolbar actions.
+- **Comments now render formatting and images.** Bodies display as sanitized HTML; Azure DevOps attachment images (which require auth) are inlined through your PAT so they actually show. Comment cards are visually separated for readability.
+- **Refresh** now also re-fetches the comments and pull requests of the selected work item.
+- Minimum VS Code version raised to 1.90 (Language Model API).
+
 ## 0.2.0
 
 - **Pull Requests** side-bar view: every PR linked to the selected item, with status pill (Draft / Active / Merged / Abandoned), title, and `repo · source → target` branches

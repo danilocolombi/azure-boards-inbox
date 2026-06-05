@@ -53,11 +53,12 @@ Replying is **off by default** so the extension only ever needs a read-only toke
 
 **Write it.** Draft in Markdown with the toolbar — **bold**, *italic*, `code`, bulleted/numbered lists, links — and watch the **live preview** render exactly what will be posted. Undo/redo works as expected. Post with **Ctrl/Cmd+Enter** or the **Comment** button.
 
-**Polish it (optional).** If you have a language model configured in your editor (e.g. GitHub Copilot), a **Polish** button cleans up grammar, clarity, and formatting:
+**Polish it (optional).** A **Polish** button cleans up grammar, clarity, and formatting:
 
-- It uses **your own model** via the editor's Language Model API — **only your draft is sent**, and nothing goes to the extension author.
+- It uses **your own model** — the editor's Language Model API (e.g. GitHub Copilot) when present, otherwise an **OpenAI-compatible** endpoint you configure. **Only your draft is sent**, and nothing goes to the extension author.
+- **Using Cursor (or any editor without a built-in model)?** Run *Azure Boards: Set AI API Key*, then set `azureBoards.ai.baseUrl` and `azureBoards.ai.model`. Any `/chat/completions` endpoint works — OpenAI, OpenRouter, Groq, or a local Ollama/LM Studio server.
 - It **rewrites in place** for you to review before posting; it never posts on its own and never invents content.
-- If no model is available, the button is simply hidden — manual commenting still works everywhere, including **Cursor**.
+- If no model and no key are available, the button is simply hidden — manual commenting still works everywhere.
 
 ## Copy as Prompt
 
@@ -78,6 +79,8 @@ Tokens: `{preamble}` `{id}` `{title}` `{type}` `{state}` `{priority}` `{assigned
 | `azureBoards.assignedToMeOnly` | `true` | Only items assigned to me |
 | `azureBoards.currentIterationOnly` | `false` | Only items in the current sprint |
 | `azureBoards.enableComments` | `false` | Turn on the Comments composer (prompts for a Read & Write token; enables optional AI polish) |
+| `azureBoards.ai.baseUrl` | `https://api.openai.com/v1` | OpenAI-compatible endpoint for Polish when your editor has no built-in model (Cursor). Works with OpenRouter, Groq, Ollama, etc. |
+| `azureBoards.ai.model` | `gpt-4o-mini` | Model id for the Polish fallback |
 | `azureBoards.staleAfterDays` | `14` | Show a `· Nd` hint on items not touched in N days (`0` disables) |
 | `azureBoards.autoRefreshMinutes` | `0` | Auto-refresh interval (`0` = off) |
 | `azureBoards.branchNamePattern` | `{type}/{id}-{title}` | Used by Copy Branch Name and the branch-aware status bar |
@@ -91,7 +94,7 @@ All commands live under the **Azure Boards** category in the Command Palette.
 - **No items showing.** Subscribe to a project (⋯ → *Manage Subscriptions*) and check the title-bar filters.
 - **Sign-in keeps coming back.** The token likely expired — re-run *Sign In*.
 - **Can't add a comment / "lacks write access".** Run *Enable Adding Comments* and paste a token with **Work Items: Read & Write**.
-- **No "Polish" button.** It only appears when your editor has a language model available (e.g. GitHub Copilot signed in).
+- **No "Polish" button.** It appears when a model is available: a `vscode.lm` provider (e.g. GitHub Copilot signed in), or an OpenAI-compatible key. In **Cursor** there's no built-in model, so run *Azure Boards: Set AI API Key* and set `azureBoards.ai.baseUrl` / `azureBoards.ai.model`.
 - **"Current iteration" filter is empty.** It uses each project's *default team*; sprints under other teams won't show.
 
 ## Develop & release

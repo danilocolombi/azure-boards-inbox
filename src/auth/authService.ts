@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { getOrganizationUrl, setOrganizationUrl } from '../state/config';
 
 const PAT_KEY = 'azureBoards.pat';
+const AI_KEY = 'azureBoards.aiApiKey';
 
 export class AuthService {
   constructor(private readonly secrets: vscode.SecretStorage) {}
@@ -16,6 +17,23 @@ export class AuthService {
 
   async clearPat(): Promise<void> {
     await this.secrets.delete(PAT_KEY);
+  }
+
+  /**
+   * API key for the OpenAI-compatible "Polish with AI" fallback, used in editors
+   * with no `vscode.lm` provider (e.g. Cursor). Separate from the Azure DevOps PAT;
+   * only ever sent to the user's configured `azureBoards.ai.baseUrl`.
+   */
+  async getAiApiKey(): Promise<string | undefined> {
+    return this.secrets.get(AI_KEY);
+  }
+
+  async setAiApiKey(key: string): Promise<void> {
+    await this.secrets.store(AI_KEY, key);
+  }
+
+  async clearAiApiKey(): Promise<void> {
+    await this.secrets.delete(AI_KEY);
   }
 
   async isSignedIn(): Promise<boolean> {

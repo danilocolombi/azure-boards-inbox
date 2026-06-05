@@ -80,6 +80,16 @@ export async function setCommentsEnabled(v: boolean): Promise<void> {
   await cfg().update('enableComments', v, vscode.ConfigurationTarget.Global);
 }
 
+/** Base URL for the OpenAI-compatible Polish fallback, e.g. https://api.openai.com/v1. */
+export function getAiBaseUrl(): string {
+  return (cfg().get<string>('ai.baseUrl') ?? '').trim().replace(/\/+$/, '');
+}
+
+/** Model id for the OpenAI-compatible Polish fallback, e.g. gpt-4o-mini. */
+export function getAiModel(): string {
+  return (cfg().get<string>('ai.model') ?? '').trim();
+}
+
 export function getStaleAfterDays(): number {
   const n = cfg().get<number>('staleAfterDays') ?? 14;
   return Number.isFinite(n) && n >= 0 ? n : 0;

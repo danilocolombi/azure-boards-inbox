@@ -2,7 +2,7 @@
   "name": "azure-boards-inbox",
   "displayName": "Azure Boards Inbox",
   "description": "Your Azure DevOps work items in VS Code's sidebar. The items on your plate, one click away.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "publisher": "danilocolombi",
   "engines": {
     "vscode": "^1.90.0"
@@ -188,6 +188,11 @@
       {
         "command": "azureBoards.enableComments",
         "title": "Enable Adding Comments",
+        "category": "Azure Boards"
+      },
+      {
+        "command": "azureBoards.setAiApiKey",
+        "title": "Set AI API Key (for Polish)",
         "category": "Azure Boards"
       },
       {
@@ -446,7 +451,19 @@
         "azureBoards.enableComments": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Allow adding comments to work items from the Comments view. Off by default so the extension only needs a read-only token. Enabling it prompts for a Personal Access Token with **Work Items (Read & Write)**. Drafting is manual; an optional **Polish with AI** button appears only when you have a language model configured in your editor (e.g. GitHub Copilot) and sends only your draft to your own model.",
+          "markdownDescription": "Allow adding comments to work items from the Comments view. Off by default so the extension only needs a read-only token. Enabling it prompts for a Personal Access Token with **Work Items (Read & Write)**. Drafting is manual; an optional **Polish with AI** button appears when a language model is available — either one configured in your editor (e.g. GitHub Copilot) or an OpenAI-compatible key set via [Set AI API Key](command:azureBoards.setAiApiKey) (for editors without a built-in model, like Cursor). Only your draft is sent to your own model.",
+          "scope": "application"
+        },
+        "azureBoards.ai.baseUrl": {
+          "type": "string",
+          "default": "https://api.openai.com/v1",
+          "markdownDescription": "Base URL for the **Polish with AI** OpenAI-compatible fallback, used when your editor has no built-in language model (e.g. Cursor). Works with any `/chat/completions` endpoint: OpenAI, OpenRouter, Groq, Together, or a local Ollama/LM Studio server. Set the key via [Set AI API Key](command:azureBoards.setAiApiKey).",
+          "scope": "application"
+        },
+        "azureBoards.ai.model": {
+          "type": "string",
+          "default": "gpt-4o-mini",
+          "markdownDescription": "Model id for the **Polish with AI** OpenAI-compatible fallback (e.g. `gpt-4o-mini`, `openai/gpt-4o-mini` on OpenRouter, or a local model name). Only used when no `vscode.lm` model is available; ignored otherwise.",
           "scope": "application"
         },
         "azureBoards.staleAfterDays": {

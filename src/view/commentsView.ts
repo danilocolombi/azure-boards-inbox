@@ -3,8 +3,8 @@ import { AuthService } from '../auth/authService';
 import { AzureClient, isUnauthorized } from '../azure/client';
 import { addComment, resolveCommentHtml } from '../azure/comments';
 import { getWorkItemDetails } from '../azure/workItems';
-import { isAiAvailable, polishDraft } from '../commands/polish';
-import { getCommentsEnabled } from '../state/config';
+import { isAiAvailable, polishDraft, OpenAiFallback } from '../commands/polish';
+import { getAiBaseUrl, getAiModel, getCommentsEnabled } from '../state/config';
 import { markdownToCommentHtml } from '../util/markdown';
 import { WorkItemNode } from './treeItems';
 
@@ -71,10 +71,24 @@ export class CommentsViewProvider implements vscode.WebviewViewProvider {
     this.setState({ kind: 'empty' });
   }
 
-  /** Re-evaluate composer availability (e.g. after the user enables commenting). */
+  /**
+   * Re-evaluate composer availability (e.g. after the user enables commenting or
+   * sets an AI key). Clears the cached AI flag so it's recomputed against the
+   * current `vscode.lm` models and OpenAI-compatible fallback config.
+   */
   refreshComposer(): void {
+    this.aiAvailable = undefined;
     void this.postCapabilities();
     this.postState(this.lastState);
+  }
+
+  /** OpenAI-compatible fallback, present only when key + base URL + model are all set. */
+  private async getFallback(): Promise<OpenAiFallback | undefined> {
+    const apiKey = await this.auth.getAiApiKey();
+    const baseUrl = getAiBaseUrl();
+    const model = getAiModel();
+    if (apiKey && baseUrl && model) return { apiKey, baseUrl, model };
+    return undefined;
   }
 
   async showFor(node: WorkItemNode): Promise<void> {
@@ -141,9 +155,12 @@ export class CommentsViewProvider implements vscode.WebviewViewProvider {
     const trimmed = text.trim();
     if (!trimmed) return;
     try {
-      const result = await polishDraft(trimmed);
+      const result = await polishDraft(trimmed, await this.getFallback());
       if (result === undefined) {
-        this.post({ type: 'composerError', message: 'No AI model is available.' });
+        this.post({
+          type: 'composerError',
+          message: 'No AI model available. Run "Azure Boards: Set AI API Key" to use your own model.'
+        });
         this.aiAvailable = false;
         void this.postCapabilities();
         return;
@@ -170,7 +187,7 @@ export class CommentsViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async postCapabilities(): Promise<void> {
-    if (this.aiAvailable === undefined) this.aiAvailable = await isAiAvailable();
+    if (this.aiAvailable === undefined) this.aiAvailable = await isAiAvailable(await this.getFallback());
     this.post({
       type: 'capabilities',
       canComment: getCommentsEnabled(),

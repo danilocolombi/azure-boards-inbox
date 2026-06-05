@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { AuthService } from './auth/authService';
 import { AzureClient } from './azure/client';
 import { manageSubscriptions } from './commands/subscriptions';
+import { setAiApiKey } from './commands/ai';
 import { enableComments } from './commands/comments';
 import { copyAsPrompt } from './commands/chat';
 import { openItem } from './commands/openItem';
@@ -269,6 +270,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.commands.registerCommand('azureBoards.enableComments', async () => {
       if (await enableComments(auth, client)) commentsProvider.refreshComposer();
+    }),
+    vscode.commands.registerCommand('azureBoards.setAiApiKey', async () => {
+      if (await setAiApiKey(auth)) commentsProvider.refreshComposer();
     }),
     vscode.commands.registerCommand('azureBoards.openItem', () => openItem()),
     vscode.commands.registerCommand('azureBoards.pinItem', (node) => pinItem(node)),

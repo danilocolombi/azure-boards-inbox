@@ -10,37 +10,64 @@ const SYSTEM_PROMPT = [
 ].join(' ');
 
 /**
- * True when the user has at least one language model available (Copilot, or any
- * other provider that registers with vscode.lm — including a Cursor-supplied one).
- * Used to decide whether to show the "Polish with AI" button. No vendor filter,
- * so the feature is provider-agnostic and simply stays hidden where no model exists.
+ * OpenAI-compatible fallback used when the editor has no `vscode.lm` provider
+ * (e.g. Cursor). All three fields must be present for the fallback to engage.
  */
-export async function isAiAvailable(): Promise<boolean> {
+export interface OpenAiFallback {
+  apiKey: string;
+  baseUrl: string; // e.g. https://api.openai.com/v1
+  model: string; // e.g. gpt-4o-mini
+}
+
+function fallbackReady(f?: OpenAiFallback): f is OpenAiFallback {
+  return !!f && !!f.apiKey && !!f.baseUrl && !!f.model;
+}
+
+async function lmModels(): Promise<vscode.LanguageModelChat[]> {
   try {
-    const models = await vscode.lm.selectChatModels();
-    return models.length > 0;
+    return await vscode.lm.selectChatModels();
   } catch {
-    return false;
+    return [];
   }
 }
 
 /**
- * Send the draft to the user's own configured model and return the polished
- * Markdown. Only the draft is sent — no work-item context. Returns undefined
- * when no model is available; throws with a friendly message on other failures.
+ * True when the user can Polish: either a `vscode.lm` model exists (Copilot or any
+ * provider that registers with the editor) or an OpenAI-compatible fallback is fully
+ * configured. Used to decide whether to show the "Polish with AI" button; the feature
+ * stays hidden where neither is available.
+ */
+export async function isAiAvailable(fallback?: OpenAiFallback): Promise<boolean> {
+  if ((await lmModels()).length > 0) return true;
+  return fallbackReady(fallback);
+}
+
+/**
+ * Send the draft to the user's own model and return the polished Markdown. Prefers a
+ * `vscode.lm` model; otherwise uses the OpenAI-compatible fallback. Only the draft is
+ * sent — no work-item context. Returns undefined when neither path is available;
+ * throws with a friendly message on request failures.
  */
 export async function polishDraft(
   draft: string,
+  fallback?: OpenAiFallback,
   token?: vscode.CancellationToken
 ): Promise<string | undefined> {
-  const [model] = await vscode.lm.selectChatModels();
-  if (!model) return undefined;
+  const [model] = await lmModels();
+  if (model) return polishViaLm(model, draft, token);
+  if (fallbackReady(fallback)) return polishViaOpenAi(draft, fallback, token);
+  return undefined;
+}
 
+async function polishViaLm(
+  model: vscode.LanguageModelChat,
+  draft: string,
+  token?: vscode.CancellationToken
+): Promise<string> {
   const messages = [
     vscode.LanguageModelChatMessage.User(SYSTEM_PROMPT),
     vscode.LanguageModelChatMessage.User(`Draft:\n\n${draft}`)
   ];
-
   try {
     const response = await model.sendRequest(
       messages,
@@ -55,5 +82,52 @@ export async function polishDraft(
       throw new Error(`AI polish failed: ${err.message}`);
     }
     throw err;
+  }
+}
+
+async function polishViaOpenAi(
+  draft: string,
+  f: OpenAiFallback,
+  token?: vscode.CancellationToken
+): Promise<string> {
+  const controller = new AbortController();
+  const sub = token?.onCancellationRequested(() => controller.abort());
+  try {
+    const res = await fetch(`${f.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${f.apiKey}`
+      },
+      body: JSON.stringify({
+        model: f.model,
+        temperature: 0.3,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: `Draft:\n\n${draft}` }
+        ]
+      }),
+      signal: controller.signal
+    });
+    if (!res.ok) {
+      const detail = (await res.text().catch(() => '')).slice(0, 300);
+      throw new Error(`AI polish failed (${res.status} from ${f.model})${detail ? `: ${detail}` : ''}`);
+    }
+    const data = (await res.json()) as {
+      choices?: { message?: { content?: string } }[];
+    };
+    const out = data.choices?.[0]?.message?.content;
+    if (typeof out !== 'string' || !out.trim()) {
+      throw new Error('AI polish returned an empty response.');
+    }
+    return out.trim();
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') throw err;
+    if (err instanceof TypeError) {
+      throw new Error(`AI polish could not reach ${f.baseUrl}. Check azureBoards.ai.baseUrl and your network.`);
+    }
+    throw err;
+  } finally {
+    sub?.dispose();
   }
 }

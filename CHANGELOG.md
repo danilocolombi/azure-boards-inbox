@@ -2,6 +2,10 @@
 
 All notable changes to **Azure Boards Inbox** are documented here.
 
+## 0.4.0
+
+- **Polish with AI now works in Cursor** (and any editor without a built-in language model). Polish still prefers a `vscode.lm` provider (e.g. GitHub Copilot) when present, but otherwise falls back to an **OpenAI-compatible** endpoint you configure. Run *Azure Boards: Set AI API Key* (stored in SecretStorage, separate from your Azure DevOps PAT) and set `azureBoards.ai.baseUrl` + `azureBoards.ai.model`. Works with OpenAI, OpenRouter, Groq, Together, or a local Ollama/LM Studio server. As before, **only your draft is sent** — to your own endpoint, never to the extension author.
+
 ## 0.3.0
 
 - **Add comments to work items** — opt-in (`azureBoards.enableComments`, off by default). Run *Enable Adding Comments* to turn on a composer in the Comments view; it prompts for a Personal Access Token with *Work Items: Read & Write* (a superset of the read-only token used otherwise). Default sign-in and all read features stay read-only.

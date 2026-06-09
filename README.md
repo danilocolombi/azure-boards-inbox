@@ -117,6 +117,10 @@ npm version patch        # bump + tag
 git push --follow-tags   # CI publishes to both registries
 ```
 
+## More from this author
+
+- **[Azure Pipelines Inbox](https://marketplace.visualstudio.com/items?itemName=danilocolombi.azure-pipelines-inbox)** — the companion for the other half of Azure DevOps: watch your pipeline runs live from the sidebar, with stage/job/task timeline, live log streaming, and AI-friendly log copying.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

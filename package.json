@@ -2,7 +2,7 @@
   "name": "azure-boards-inbox",
   "displayName": "Azure Boards Inbox",
   "description": "Your Azure DevOps work items in VS Code's sidebar. The items on your plate, one click away.",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "publisher": "danilocolombi",
   "engines": {
     "vscode": "^1.90.0"
@@ -60,7 +60,12 @@
       {
         "view": "azureBoards.workItems",
         "contents": "You're signed in but haven't subscribed to any projects yet.\n[Manage Subscriptions](command:azureBoards.manageSubscriptions)",
-        "when": "azureBoards.signedIn && azureBoards.noSubscriptions"
+        "when": "azureBoards.signedIn && azureBoards.noSubscriptions && !azureBoards.authError"
+      },
+      {
+        "view": "azureBoards.workItems",
+        "contents": "Azure DevOps rejected your access token (401/403). It may have expired or be missing the required scopes.\n[Update Access Token](command:azureBoards.updateToken)",
+        "when": "azureBoards.signedIn && azureBoards.authError"
       }
     ],
     "commands": [
@@ -72,6 +77,11 @@
       {
         "command": "azureBoards.signOut",
         "title": "Sign Out",
+        "category": "Azure Boards"
+      },
+      {
+        "command": "azureBoards.updateToken",
+        "title": "Update Access Token",
         "category": "Azure Boards"
       },
       {

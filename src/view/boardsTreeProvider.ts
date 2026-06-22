@@ -47,6 +47,7 @@ export class BoardsTreeProvider
   private meOpenCounts = new Map<string, number>();
   private persisted: PersistedStore;
   private signedIn = false;
+  private authError = false;
 
   constructor(
     private readonly client: AzureClient,
@@ -59,6 +60,7 @@ export class BoardsTreeProvider
   }
 
   refresh(): void {
+    this.setAuthError(false);
     this.cache.clear();
     this.meOpenCounts.clear();
     for (const [projectId, p] of Object.entries(this.persisted)) {
@@ -96,9 +98,22 @@ export class BoardsTreeProvider
     this._onDidChangeTreeData.fire();
   }
 
+  /**
+   * Mirror the auth-error state into a context key so the `viewsWelcome` panel
+   * (with its "Update Access Token" button) renders in place of an empty tree.
+   */
+  private setAuthError(value: boolean): void {
+    if (this.authError === value) return;
+    this.authError = value;
+    void vscode.commands.executeCommand('setContext', 'azureBoards.authError', value);
+  }
+
   async getChildren(element?: Node): Promise<Node[]> {
     if (!element) {
       if (!this.signedIn) return [];
+      // Empty root while an auth error is active lets the "Update Access Token"
+      // welcome panel render in place of the tree.
+      if (this.authError) return [];
       const subs = getSubscriptions();
       if (subs.length === 0) return [];
       const top: Node[] = [];
@@ -239,17 +254,13 @@ export class BoardsTreeProvider
       await this.persist(sub.projectId, items, meCount);
       this._onDidChangeCounts.fire();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : typeof err === 'string' ? err : 'Unknown error';
-      this.cache.set(sub.projectId, { loading: false, error: `Error: ${message}` });
       if (isUnauthorized(err)) {
-        const choice = await vscode.window.showErrorMessage(
-          'Azure Boards: authentication failed. Sign in again?',
-          'Sign In'
-        );
-        if (choice === 'Sign In') {
-          await vscode.commands.executeCommand('azureBoards.signIn');
-        }
+        // Surface a friendly, in-view recovery panel instead of a modal.
+        this.setAuthError(true);
+      } else {
+        const message =
+          err instanceof Error ? err.message : typeof err === 'string' ? err : 'Unknown error';
+        this.cache.set(sub.projectId, { loading: false, error: `Error: ${message}` });
       }
     } finally {
       this._onDidChangeTreeData.fire();

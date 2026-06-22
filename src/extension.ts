@@ -177,6 +177,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
     }),
 
+    vscode.commands.registerCommand('azureBoards.updateToken', async () => {
+      if (await auth.promptUpdatePat()) {
+        client.invalidate();
+        await refreshContext();
+        provider.refresh();
+        vscode.window.showInformationMessage('Azure Boards: access token updated.');
+      }
+    }),
+
     vscode.commands.registerCommand('azureBoards.signOut', async () => {
       await auth.clearPat();
       client.invalidate();

@@ -92,7 +92,7 @@ All commands live under the **Azure Boards** category in the Command Palette.
 ## Troubleshooting
 
 - **No items showing.** Subscribe to a project (⋯ → *Manage Subscriptions*) and check the title-bar filters.
-- **Sign-in keeps coming back.** The token likely expired — re-run *Sign In*.
+- **"Azure DevOps rejected your access token (401/403)".** Your PAT expired or is missing scopes — click *Update Access Token* in the Work Items panel (or run the *Update Access Token* command) and paste a fresh one.
 - **Can't add a comment / "lacks write access".** Run *Enable Adding Comments* and paste a token with **Work Items: Read & Write**.
 - **No "Polish" button.** It appears when a model is available: a `vscode.lm` provider (e.g. GitHub Copilot signed in), or an OpenAI-compatible key. In **Cursor** there's no built-in model, so run *Azure Boards: Set AI API Key* and set `azureBoards.ai.baseUrl` / `azureBoards.ai.model`.
 - **"Current iteration" filter is empty.** It uses each project's *default team*; sprints under other teams won't show.

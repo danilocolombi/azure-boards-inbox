@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getOrganizationUrl, setOrganizationUrl } from '../state/config';
+import { getCommentsEnabled, getOrganizationUrl, setOrganizationUrl } from '../state/config';
 
 const PAT_KEY = 'azureBoards.pat';
 const AI_KEY = 'azureBoards.aiApiKey';
@@ -85,6 +85,29 @@ export class AuthService {
     const pat = await vscode.window.showInputBox({
       title: 'Azure DevOps Personal Access Token (Read & Write)',
       prompt: 'Adding comments needs a PAT with Work Items (Read & Write) scope',
+      password: true,
+      ignoreFocusOut: true,
+      validateInput: (v) => (v && v.trim().length > 0 ? null : 'Required')
+    });
+    if (!pat) return false;
+    await this.setPat(pat.trim());
+    return true;
+  }
+
+  /**
+   * Re-prompt for a PAT after Azure DevOps rejected the current one (401/403).
+   * Token-only when the org URL is already known; requests Read & Write scope if
+   * the opt-in comment feature is enabled (a write PAT is a superset of read),
+   * otherwise read-only. Falls back to the full sign-in flow if no org is set.
+   */
+  async promptUpdatePat(): Promise<boolean> {
+    if (!getOrganizationUrl()) return this.promptSignIn();
+    const write = getCommentsEnabled();
+    const pat = await vscode.window.showInputBox({
+      title: 'Update Azure DevOps Personal Access Token',
+      prompt: write
+        ? 'Needs Work Items (Read & Write) scope'
+        : 'Needs Work Items (Read) and Project and Team (Read) scopes',
       password: true,
       ignoreFocusOut: true,
       validateInput: (v) => (v && v.trim().length > 0 ? null : 'Required')

@@ -2,6 +2,10 @@
 
 All notable changes to **Azure Boards Inbox** are documented here.
 
+## 0.4.2
+
+- **Friendlier expired-token recovery.** When Azure DevOps rejects your PAT (401/403), the Work Items panel now shows an inline message — *"Azure DevOps rejected your access token (401/403)…"* — with a one-click **Update Access Token** button, instead of a modal dialog. The new *Update Access Token* command re-prompts for a token (Read & Write if comments are enabled, read-only otherwise).
+
 ## 0.4.1
 
 - **README**: link to the companion extension **[Azure Pipelines Inbox](https://marketplace.visualstudio.com/items?itemName=danilocolombi.azure-pipelines-inbox)** — watch your Azure DevOps pipeline runs live from the sidebar.

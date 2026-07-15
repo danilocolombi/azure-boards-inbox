@@ -2,6 +2,10 @@
 
 All notable changes to **Azure Boards Inbox** are documented here.
 
+## 0.4.4
+
+- **Dependency updates**: azure-devops-node-api 15, TypeScript 6, ESLint 10 (flat config). Wrapped errors from *Polish with AI* now carry the original error as `cause` for better diagnostics. No user-facing changes.
+
 ## 0.4.3
 
 - **README**: link to the new companion extension **[Azure Pull Requests Inbox](https://marketplace.visualstudio.com/items?itemName=danilocolombi.azure-pull-requests-inbox)** — your team's pull requests in the sidebar, with the ones that need your review pinned on top.

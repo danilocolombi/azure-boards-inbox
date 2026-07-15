@@ -2,7 +2,7 @@
   "name": "azure-boards-inbox",
   "displayName": "Azure Boards Inbox",
   "description": "Your Azure DevOps work items in VS Code's sidebar. The items on your plate, one click away.",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "publisher": "danilocolombi",
   "engines": {
     "vscode": "^1.90.0"

@@ -2,6 +2,11 @@
 
 All notable changes to **Azure Boards Inbox** are documented here.
 
+## 0.4.3
+
+- **README**: link to the new companion extension **[Azure Pull Requests Inbox](https://marketplace.visualstudio.com/items?itemName=danilocolombi.azure-pull-requests-inbox)** — your team's pull requests in the sidebar, with the ones that need your review pinned on top.
+- Dev-dependency updates (esbuild 0.28, js-yaml audit fix). No functional changes.
+
 ## 0.4.2
 
 - **Friendlier expired-token recovery.** When Azure DevOps rejects your PAT (401/403), the Work Items panel now shows an inline message — *"Azure DevOps rejected your access token (401/403)…"* — with a one-click **Update Access Token** button, instead of a modal dialog. The new *Update Access Token* command re-prompts for a token (Read & Write if comments are enabled, read-only otherwise).

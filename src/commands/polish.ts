@@ -79,7 +79,7 @@ async function polishViaLm(
     return out.trim();
   } catch (err) {
     if (err instanceof vscode.LanguageModelError) {
-      throw new Error(`AI polish failed: ${err.message}`);
+      throw new Error(`AI polish failed: ${err.message}`, { cause: err });
     }
     throw err;
   }
@@ -124,7 +124,7 @@ async function polishViaOpenAi(
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') throw err;
     if (err instanceof TypeError) {
-      throw new Error(`AI polish could not reach ${f.baseUrl}. Check azureBoards.ai.baseUrl and your network.`);
+      throw new Error(`AI polish could not reach ${f.baseUrl}. Check azureBoards.ai.baseUrl and your network.`, { cause: err });
     }
     throw err;
   } finally {

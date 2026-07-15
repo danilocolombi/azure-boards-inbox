@@ -120,6 +120,7 @@ git push --follow-tags   # CI publishes to both registries
 ## More from this author
 
 - **[Azure Pipelines Inbox](https://marketplace.visualstudio.com/items?itemName=danilocolombi.azure-pipelines-inbox)** — the companion for the other half of Azure DevOps: watch your pipeline runs live from the sidebar, with stage/job/task timeline, live log streaming, and AI-friendly log copying.
+- **[Azure Pull Requests Inbox](https://marketplace.visualstudio.com/items?itemName=danilocolombi.azure-pull-requests-inbox)** — your team's pull requests in the sidebar, with the ones that need your review pinned on top: native side-by-side diffs, conversation threads with reply, voting and merging from the editor, and one-click AI review.
 
 ## License
 
